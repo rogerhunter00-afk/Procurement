@@ -12,6 +12,14 @@ let pdfJsLoadPromise = null;
 const PDFJS_CDN_VERSION = '4.10.38';
 const PDFJS_MODULE_URL = `https://unpkg.com/pdfjs-dist@${PDFJS_CDN_VERSION}/build/pdf.mjs`;
 const PDFJS_WORKER_URL = `https://unpkg.com/pdfjs-dist@${PDFJS_CDN_VERSION}/build/pdf.worker.mjs`;
+const INLINE_LOGO_DATA_URI = `data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 170" role="img" aria-label="Aberdeen Laundry Services">
+    <rect width="500" height="170" fill="white"/>
+    <text x="10" y="62" font-family="Arial, Helvetica, sans-serif" font-size="72" fill="#0a2a84" font-weight="700">aberdeen</text>
+    <text x="10" y="128" font-family="Arial, Helvetica, sans-serif" font-size="112" fill="#0a2a84" font-weight="800">Laundry</text>
+    <text x="270" y="160" font-family="Arial, Helvetica, sans-serif" font-size="64" fill="#0a2a84" font-weight="500">services</text>
+  </svg>`,
+)}`;
 
 async function loadPdfJs() {
   if (!pdfJsLoadPromise) {
@@ -113,12 +121,13 @@ function buildDocumentFromParse(parsed, sourceText) {
   .page { width: 190mm; min-height: 277mm; margin: 0 auto; }
   .header {
     display: grid;
-    grid-template-columns: 1fr 60mm;
+    grid-template-columns: auto 1fr 60mm;
     gap: 10px;
     border-bottom: 2px solid var(--brand);
     padding-bottom: 8px;
     align-items: flex-start;
   }
+  .header img { max-height: 18mm; max-width: 70mm; object-fit: contain; }
   .title { font-size: 15pt; font-weight: 700; color: var(--brand); margin: 0; }
   .subtitle { font-size: 8.5pt; color: var(--muted); margin: 4px 0 0; }
   .meta-table, table { width: 100%; border-collapse: collapse; }
@@ -160,6 +169,7 @@ function buildDocumentFromParse(parsed, sourceText) {
 <body>
 <div class="page">
   <div class="header">
+    <img src="${INLINE_LOGO_DATA_URI}" alt="Aberdeen Laundry Services"/>
     <div>
       <p class="title">Internal Supply Request</p>
       <p class="subtitle">${displayOrPlaceholder(parsed.referenceId, '[Request title / reference]')}</p>
