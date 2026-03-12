@@ -87,6 +87,16 @@ type Props = {
 
 const roundCurrency = (value: number) => Math.round(value * 100) / 100;
 
+
+const INLINE_LOGO_DATA_URI = `data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 170" role="img" aria-label="Aberdeen Laundry Services">
+    <rect width="500" height="170" fill="white"/>
+    <text x="10" y="62" font-family="Arial, Helvetica, sans-serif" font-size="72" fill="#0a2a84" font-weight="700">aberdeen</text>
+    <text x="10" y="128" font-family="Arial, Helvetica, sans-serif" font-size="112" fill="#0a2a84" font-weight="800">Laundry</text>
+    <text x="270" y="160" font-family="Arial, Helvetica, sans-serif" font-size="64" fill="#0a2a84" font-weight="500">services</text>
+  </svg>`,
+)}`;
+
 const escapeHtml = (value: string) =>
   value
     .replaceAll('&', '&amp;')
@@ -169,7 +179,7 @@ const buildGeneratedHtml = (doc: ProcurementDoc) => {
     <body>
     <div class="page">
       <div class="header">
-        <img src="LOGOlesswhitespace.png" alt="Aberdeen Laundry Services"/>
+        <img src="${INLINE_LOGO_DATA_URI}" alt="Aberdeen Laundry Services"/>
         <div>
           <p class="title">Internal Supply Request</p>
           <p class="subtitle">${displayOrPlaceholder(doc.reference, '[Enter request title / supplier / item / project here]')}</p>
