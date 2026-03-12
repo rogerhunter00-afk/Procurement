@@ -127,10 +127,10 @@ const buildGeneratedHtml = (doc: ProcurementDoc) => {
         <tr>
           <td>${idx + 1}</td>
           <td>${displayOrPlaceholder(item.description, '[Part / service description]')}</td>
-          <td>${item.qty.toFixed(2)}</td>
-          <td>${item.unit.toFixed(2)}</td>
+          <td class="num">${item.qty.toFixed(2)}</td>
+          <td class="num">${item.unit.toFixed(2)}</td>
           <td>${displayOrPlaceholder(item.notes, '[Relevant note / exclusions / lead time / application]')}</td>
-          <td>${item.line.toFixed(2)}</td>
+          <td class="num">${item.line.toFixed(2)}</td>
         </tr>
       `,
     )
@@ -142,11 +142,17 @@ const buildGeneratedHtml = (doc: ProcurementDoc) => {
     <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>Internal Supply Request</title>
+    <title>Internal Supply Request Template</title>
     <style>
       @page { size: A4; margin: 8mm; }
       html,body { margin:0; background:#fff; }
       * { box-sizing:border-box; }
+      @media print {
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        table { page-break-inside:auto; }
+        tr, td, th { page-break-inside: avoid; break-inside: avoid; }
+        .card, .section-block { page-break-inside: avoid; break-inside: avoid; }
+      }
       :root {
         --brand:#0a2a84;
         --ink:#0b0f1a;
@@ -160,27 +166,159 @@ const buildGeneratedHtml = (doc: ProcurementDoc) => {
         line-height:1.3;
         color:var(--ink);
       }
-      .page { width:190mm; min-height:277mm; margin:0 auto; }
-      .header { display:grid; grid-template-columns:auto 1fr 60mm; gap:10px; border-bottom:2px solid var(--brand); padding-bottom:8px; align-items:flex-start; }
-      .header img { max-height:18mm; max-width:70mm; object-fit:contain; }
-      .title { font-size:15pt; font-weight:700; color:var(--brand); margin:0; }
-      .subtitle { font-size:8.5pt; color:var(--muted); }
-      .meta-table, table { width:100%; border-collapse:collapse; }
-      .meta-table th, .meta-table td, th, td { border:1px solid var(--line); padding:4px 5px; text-align:left; }
-      thead th, .meta-table th { background:#e3e9ff; color:var(--brand); font-weight:700; }
-      .card { border:1px solid var(--line); border-radius:var(--radius); padding:6px 8px; margin-top:6px; }
-      .card h2 { margin:0 0 4px 0; font-size:10.5pt; color:var(--brand); }
-      .kv { display:grid; grid-template-columns:32mm 1fr; gap:4px; margin-bottom:3px; }
-      .label { font-weight:600; color:var(--muted); font-size:8.6pt; }
+      .page {
+        width:190mm;
+        min-height:277mm;
+        margin:0 auto;
+        display:flex;
+        flex-direction:column;
+      }
+      .header {
+        display:grid;
+        grid-template-columns:auto 1fr 60mm;
+        gap:10px;
+        border-bottom:2px solid var(--brand);
+        padding-bottom:8px;
+        align-items:flex-start;
+      }
+      .header img {
+        max-height:18mm;
+        max-width:70mm;
+        object-fit:contain;
+      }
+      .titlewrap { line-height:1.05; }
+      .title {
+        font-size:15pt;
+        font-weight:700;
+        color:var(--brand);
+        margin:0;
+      }
+      .subtitle {
+        font-size:8.5pt;
+        color:var(--muted);
+      }
+
+      .meta-table {
+        width:100%;
+        border:1px solid var(--line);
+        border-collapse:collapse;
+        font-size:8.5pt;
+      }
+      .meta-table th {
+        border:1px solid var(--line);
+        padding:3px 5px;
+        white-space:nowrap;
+        background:#e3e9ff;
+        text-align:left;
+      }
+      .meta-table td {
+        border:1px solid var(--line);
+        padding:3px 5px;
+        white-space:normal;
+      }
+
+      .card {
+        border:1px solid var(--line);
+        border-radius:var(--radius);
+        padding:6px 8px;
+        margin-top:6px;
+      }
+      .card h2 {
+        margin:0 0 4px 0;
+        font-size:10.5pt;
+        color:var(--brand);
+        display:flex;
+        align-items:center;
+        gap:8px;
+      }
+      .rule { flex:1; border-bottom:1.4px solid rgba(10,42,132,.35); }
+
+      .grid2 {
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:4px 10px;
+      }
+      .kv {
+        display:grid;
+        grid-template-columns:32mm 1fr;
+        gap:4px;
+        align-items:start;
+      }
+      .kv.full { grid-column:1 / -1; }
+      .label {
+        font-weight:600;
+        color:var(--muted);
+        font-size:8.6pt;
+      }
+
+      table {
+        width:100%;
+        border-collapse:collapse;
+      }
+      thead th {
+        background:#e3e9ff;
+        color:var(--brand);
+        font-weight:700;
+        font-size:8.6pt;
+      }
+      th, td {
+        border:1px solid var(--line);
+        padding:4px 5px;
+        vertical-align:top;
+        word-wrap:break-word;
+        overflow-wrap:break-word;
+        white-space:normal;
+      }
       .num { text-align:right; }
-      .placeholder { color:#7a8195; font-style:italic; }
+
+      .bottom-row {
+        display:grid;
+        grid-template-columns:1fr;
+        gap:6px;
+        margin-top:6px;
+      }
+      .section-block {
+        border:1px solid var(--line);
+        border-radius:var(--radius);
+        padding:6px 8px 4px;
+      }
+      .section-title {
+        font-weight:700;
+        color:var(--brand);
+        border-bottom:1px solid rgba(10,42,132,.2);
+        margin-bottom:4px;
+        padding-bottom:1px;
+      }
+      .supplier-grid {
+        display:grid;
+        grid-template-columns:1.2fr 1fr;
+        gap:4px 18px;
+      }
+      .field-label {
+        font-size:8pt;
+        color:var(--muted);
+        margin-bottom:1px;
+      }
+      .line {
+        border-bottom:1px solid #cbd2e6;
+        height:5mm;
+      }
+      .tiny {
+        font-size:7.5pt;
+        color:var(--muted);
+      }
+      .placeholder {
+        color:#7a8195;
+        font-style:italic;
+      }
     </style>
     </head>
     <body>
     <div class="page">
+
       <div class="header">
         <img src="${INLINE_LOGO_DATA_URI}" alt="Aberdeen Laundry Services"/>
-        <div>
+        <div class="titlewrap">
           <p class="title">Internal Supply Request</p>
           <p class="subtitle">${displayOrPlaceholder(doc.reference, '[Enter request title / supplier / item / project here]')}</p>
         </div>
@@ -193,20 +331,29 @@ const buildGeneratedHtml = (doc: ProcurementDoc) => {
       </div>
 
       <div class="card">
-        <h2>Requester &amp; Supplier</h2>
-        <div class="kv"><div class="label">Supplier</div><div>${displayOrPlaceholder(doc.supplier, '[Supplier name and address]')}</div></div>
-        <div class="kv"><div class="label">Reference</div><div>${displayOrPlaceholder(doc.reference, '[Quote / invoice / delivery note / PO / revision / date]')}</div></div>
-        <div class="kv"><div class="label">Summary</div><div>${displayOrPlaceholder(doc.notes, '[Short summary of what is being purchased or approved.]')}</div></div>
+        <h2>Requester &amp; Supplier <span class="rule"></span></h2>
+        <div class="grid2">
+          <div class="kv"><div class="label">Requester</div><div><span class="placeholder">[Name / role]</span></div></div>
+          <div class="kv"><div class="label">Cost Centre</div><div><span class="placeholder">[e.g. 7701_Engineering Parts/Fabrications]</span></div></div>
+          <div class="kv"><div class="label">Email</div><div><span class="placeholder">[email]</span></div></div>
+          <div class="kv"><div class="label">Phone</div><div><span class="placeholder">[phone]</span></div></div>
+          <div class="kv"><div class="label">Supplier</div><div>${displayOrPlaceholder(doc.supplier, '[Supplier name and address]')}</div></div>
+          <div class="kv"><div class="label">Reference</div><div>${displayOrPlaceholder(doc.reference, '[Quote / invoice / delivery note / PO / revision / date]')}</div></div>
+          <div class="kv full"><div class="label">Summary</div><div>${displayOrPlaceholder(doc.notes, '[Short summary of what is being purchased or approved, why, and any key context.]')}</div></div>
+        </div>
       </div>
 
       <div class="card">
-        <h2>Delivery / Asset Details</h2>
-        <div class="kv"><div class="label">Deliver To / Site Address</div><div>${displayOrPlaceholder(doc.deliveryTo, '[Delivery address or site address]')}</div></div>
-        <div class="kv"><div class="label">Equipment / Asset</div><div>${displayOrPlaceholder(doc.equipment, '[Machine / asset / area / project]')}</div></div>
+        <h2>Delivery / Asset Details <span class="rule"></span></h2>
+        <div class="grid2">
+          <div class="kv full"><div class="label">Deliver To / Site Address</div><div>${displayOrPlaceholder(doc.deliveryTo, '[Delivery address or site address]')}</div></div>
+          <div class="kv"><div class="label">Equipment / Asset</div><div>${displayOrPlaceholder(doc.equipment, '[Machine / asset / area / project]')}</div></div>
+          <div class="kv"><div class="label">Notes</div><div>${displayOrPlaceholder(doc.notes, '[Lead time / urgency / background / exclusions / install notes / retrospective context]')}</div></div>
+        </div>
       </div>
 
       <div class="card">
-        <h2>Requested / Invoiced Items</h2>
+        <h2>Requested / Invoiced Items <span class="rule"></span></h2>
         <table>
           <thead>
             <tr>
@@ -225,7 +372,69 @@ const buildGeneratedHtml = (doc: ProcurementDoc) => {
             <tr><td colspan="5" class="num">Total inc VAT</td><td class="num">${doc.totalInc.toFixed(2)}</td></tr>
           </tfoot>
         </table>
+        <p class="tiny" style="margin-top:3px;"><span class="placeholder">[Use this line for quotation / invoice notes, exclusions, validity period, delivery terms, or any pricing caveats.]</span></p>
       </div>
+
+      <div class="bottom-row">
+        <div class="section-block">
+          <div class="section-title">Supplier &amp; Alternatives</div>
+          <div class="supplier-grid">
+            <div>
+              <div class="field-label">Vendor Name</div>
+              <div>${displayOrPlaceholder(doc.supplier, '[Primary supplier]')}</div>
+            </div>
+            <div>
+              <div class="field-label">Reason for Selection</div>
+              <div><span class="placeholder">[Why this supplier was chosen]</span></div>
+            </div>
+            <div>
+              <div class="field-label">Alternative Supplier / Options</div>
+              <div><span class="placeholder">[Alternative suppliers / OEM / other approaches]</span></div>
+            </div>
+            <div>
+              <div class="field-label">Why Alternative Rejected</div>
+              <div><span class="placeholder">[Cost / lead time / availability / compatibility / urgency / no OEM available etc.]</span></div>
+            </div>
+            <div>
+              <div class="field-label">Criteria Used</div>
+              <div><span class="placeholder">[What was considered: cost, lead time, OEM, compatibility, urgency, etc.]</span></div>
+            </div>
+            <div>
+              <div class="field-label">Notes</div>
+              <div><span class="placeholder">[Any final procurement notes, credit account form, future payment setup, retrospective context, etc.]</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-title">Approvals</div>
+          <div style="display:grid; grid-template-columns:1.5fr 1fr; gap:12px;">
+            <div>
+              <div class="field-label">Approved by</div>
+              <div class="line"></div>
+            </div>
+            <div>
+              <div class="field-label">Signature</div>
+              <div class="line"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-block">
+          <div class="section-title">For Procurement / Finance Use Only</div>
+          <div class="grid2" style="grid-template-columns:1fr 1fr;">
+            <div><div class="field-label">Procurement Officer / Processed by</div><div class="line"></div></div>
+            <div><div class="field-label">Date of Approval / Processed</div><div class="line"></div></div>
+          </div>
+          <div style="display:flex; gap:14px; margin-top:3px;">
+            <label><span style="width:5mm; height:5mm; border:1px solid #000; display:inline-block; margin-right:3px;"></span> Approved</label>
+            <label><span style="width:5mm; height:5mm; border:1px solid #000; display:inline-block; margin-right:3px;"></span> Denied</label>
+            <label><span style="width:5mm; height:5mm; border:1px solid #000; display:inline-block; margin-right:3px;"></span> On Hold</label>
+          </div>
+          <p class="tiny" style="margin-top:3px;">Attach the relevant quote / invoice / delivery note / supporting documents when submitting this form.</p>
+        </div>
+      </div>
+
     </div>
     </body>
     </html>
