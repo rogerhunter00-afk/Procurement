@@ -85,16 +85,46 @@ function inferSupplier(text) {
     return supplierLine.split(/[:\-]/).slice(1).join(':').trim();
   }
 
-  const companyLike = text
+  const companyNamePattern = /\b([A-Z][\w'.-]*(?:\s+(?:&|and))?(?:\s+[A-Z][\w'.-]*){0,6}\s+(?:Limited|Ltd\.?|LLC|Inc\.?|Corp\.?|GmbH|Co\.?))\b/g;
+  const companyLikeLine = text
     .split('\n')
-    .find((line) => /\b(inc\.?|llc|ltd\.?|corp\.?|gmbh|co\.)\b/i.test(line));
+    .find((line) => /\b(inc\.?|llc|ltd\.?|limited|corp\.?|gmbh|co\.)\b/i.test(line));
 
-  return companyLike?.trim() || '';
+  if (companyLikeLine) {
+    const matches = [...companyLikeLine.matchAll(companyNamePattern)];
+    if (matches.length) {
+      return matches[0][1].trim();
+    }
+  }
+
+  const fullTextMatches = [...text.matchAll(companyNamePattern)];
+  if (fullTextMatches.length) {
+    return fullTextMatches[0][1].trim();
+  }
+
+  return '';
 }
 
 function inferTotal(text) {
-  const totalMatch = text.match(/\b(total|amount due|grand total)\b\s*[:\-]?\s*([$€£]?\s?[0-9][0-9,]*(?:\.[0-9]{2})?)/i);
-  return totalMatch?.[2]?.replace(/\s+/g, '') || '';
+  const amountPattern = '([$€£]\\s?[0-9][0-9,]*(?:\\.[0-9]{2})?|[0-9][0-9,]*\\.[0-9]{2})';
+  const totalMatch = text.match(new RegExp(`\\b(total|amount due|grand total)\\b\\s*[:\\-]?\\s*${amountPattern}`, 'i'));
+  if (totalMatch?.[2]) {
+    return totalMatch[2].replace(/\s+/g, '');
+  }
+
+  const subtotalLikeMatch = text.match(new RegExp(`\\b(subtotal|net|total ex vat|ex vat|quotation(?:\\s+is)?(?:\\s+for)?)\\b[^\\n£$€]{0,40}${amountPattern}`, 'i'));
+  if (subtotalLikeMatch?.[2]) {
+    return subtotalLikeMatch[2].replace(/\s+/g, '');
+  }
+
+  const currencyAmounts = [...text.matchAll(/[$€£]\s?[0-9][0-9,]*(?:\.[0-9]{2})?/g)]
+    .map((match) => match[0].replace(/\s+/g, ''));
+
+  if (currencyAmounts.length) {
+    return currencyAmounts[currencyAmounts.length - 1];
+  }
+
+  return '';
 }
 
 function inferReferenceId(text) {
@@ -103,17 +133,54 @@ function inferReferenceId(text) {
 }
 
 function inferItems(text) {
-  const lines = text.split('\n');
-  const itemLines = lines.filter((line) => {
+  const sourceSegments = text.includes('\n')
+    ? text.split('\n')
+    : text.split(/(?<=\.)\s+(?=[A-Z])|\s+[•·-]\s+|(?=\b(?:Item Description|Subtotal|Total|VAT)\b)/i);
+
+  const candidateLines = sourceSegments
+    .flatMap((line) => {
+      const normalized = normalizeWhitespace(line);
+      if (normalized.length <= 180) return [normalized];
+      return normalized
+        .split(/(?<=\.)\s+(?=[A-Z])|(?=\b\d+(?:\.\d+)?\s*(?:x|each|ea|units?)\b)|(?=\b(?:Item Description|Cost|Subtotal|Total|VAT)\b)/i)
+        .map(normalizeWhitespace);
+    })
+    .filter(Boolean);
+
+  const itemLines = candidateLines.filter((line) => {
     const amount = /([$€£]?\s?[0-9][0-9,]*(?:\.[0-9]{2})?)/.test(line);
-    const qty = /\bqty\b|\bquantity\b|\bx\d+\b|\b\d+\s+units?\b/i.test(line);
-    return (TABLE_HINT.test(line) || qty) && amount;
+    const qty = /\bqty\b|\bquantity\b|\b\d+(?:\.\d+)?\s*(?:x|each|ea|units?)\b|\bx\s*\d+\b/i.test(line);
+    const likelyNoise = /\b(terms|conditions|registered office|vat at the current rate|company no\.?|dear\s+sirs)\b/i.test(line);
+    const containsUrl = /\b(?:https?:\/\/|www\.)\S+/i.test(line);
+    const hasTablePipe = /\|/.test(line);
+    return (TABLE_HINT.test(line) || qty) && amount && line.length <= 180 && !likelyNoise && !containsUrl && !hasTablePipe;
   });
 
-  return itemLines.slice(0, 20).map((line, index) => ({
-    line: index + 1,
-    description: line.trim()
-  }));
+  if (!itemLines.length) {
+    const descriptionFallback = text.match(
+      /item\s+description\s*[:\-]?\s*(.{12,180}?)(?=\s(?:vat\b|total\b|subtotal\b|[$€£]\s?\d|\d{2,}\.\d{2}|$))/i,
+    );
+
+    if (descriptionFallback?.[1]) {
+      const cleanedDescription = normalizeWhitespace(
+        descriptionFallback[1].replace(/^item\s+description\s*(?:cost)?\s*/i, ''),
+      );
+
+      return [
+        {
+          line: 1,
+          description: cleanedDescription,
+        },
+      ];
+    }
+  }
+
+  return [...new Set(itemLines.map((line) => normalizeWhitespace(line)))]
+    .slice(0, 20)
+    .map((line, index) => ({
+      line: index + 1,
+      description: line.replace(/^item\s+description\s*(?:cost)?\s*/i, '').trim(),
+    }));
 }
 
 export function parseDocument(sourceText) {
