@@ -10,14 +10,14 @@
     <main class="container">
       <h1>Procurement Request Builder</h1>
       <p class="subtitle">
-        Upload a quote (text file) and/or paste the content below, then generate your procurement request HTML file.
+        Upload a quote (text or PDF file) and/or paste the content below, then generate your procurement request HTML file.
       </p>
 
       <section class="panel">
         <h2>1) Add your quote details</h2>
 
-        <label for="quoteFile">Upload quote file (TXT/CSV/MD)</label>
-        <input id="quoteFile" type="file" accept=".txt,.csv,.md,text/plain" />
+        <label for="quoteFile">Upload quote file (TXT/CSV/MD/PDF)</label>
+        <input id="quoteFile" type="file" accept=".txt,.csv,.md,.pdf,text/plain,application/pdf" />
         <p id="fileStatus" class="helper">No file selected yet.</p>
 
         <label for="sourceText">Or paste quote text</label>
