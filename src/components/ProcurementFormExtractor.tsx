@@ -1,5 +1,62 @@
 import React, { useMemo, useState } from 'react';
 
+type PdfJsTextItem = { str?: string };
+type PdfJsTextContent = { items: PdfJsTextItem[] };
+type PdfJsPage = { getTextContent: () => Promise<PdfJsTextContent> };
+type PdfJsDocument = { numPages: number; getPage: (pageNumber: number) => Promise<PdfJsPage> };
+type PdfJsModule = {
+  getDocument: (params: { data: ArrayBuffer }) => { promise: Promise<PdfJsDocument> };
+  GlobalWorkerOptions: { workerSrc: string };
+};
+
+const PDFJS_CDN_VERSION = '4.10.38';
+const PDFJS_MODULE_URL = `https://unpkg.com/pdfjs-dist@${PDFJS_CDN_VERSION}/build/pdf.mjs`;
+const PDFJS_WORKER_URL = `https://unpkg.com/pdfjs-dist@${PDFJS_CDN_VERSION}/build/pdf.worker.mjs`;
+
+let pdfJsLoadPromise: Promise<PdfJsModule | null> | null = null;
+
+const loadPdfJs = async (): Promise<PdfJsModule | null> => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  if (!pdfJsLoadPromise) {
+    pdfJsLoadPromise = import(/* @vite-ignore */ PDFJS_MODULE_URL)
+      .then((module) => {
+        const pdfjs = module as PdfJsModule;
+        pdfjs.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+        return pdfjs;
+      })
+      .catch(() => null);
+  }
+
+  return pdfJsLoadPromise;
+};
+
+const extractPdfText = async (file: File): Promise<string> => {
+  const pdfjs = await loadPdfJs();
+  if (!pdfjs) {
+    throw new Error('pdf.js is unavailable in this deployment.');
+  }
+
+  const data = await file.arrayBuffer();
+  const pdf = await pdfjs.getDocument({ data }).promise;
+
+  const pages: string[] = [];
+  for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+    const page = await pdf.getPage(pageNumber);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items
+      .map((item) => item.str ?? '')
+      .join(' ')
+      .trim();
+
+    pages.push(pageText);
+  }
+
+  return pages.filter(Boolean).join('\n\n');
+};
+
 export type ProcurementItem = {
   description: string;
   qty: number;
@@ -178,6 +235,9 @@ export const ProcurementFormExtractor: React.FC<Props> = ({
   }));
 
   const [isManualTotalsOverride, setIsManualTotalsOverride] = useState(false);
+  const [sourceText, setSourceText] = useState('');
+  const [fileStatus, setFileStatus] = useState('No PDF selected.');
+  const [pdfJsAvailable, setPdfJsAvailable] = useState<boolean | null>(null);
 
   const autoTotals = useMemo(
     () => recalculateFromItems(doc.items, vatRate),
@@ -243,9 +303,53 @@ export const ProcurementFormExtractor: React.FC<Props> = ({
     setIsManualTotalsOverride(false);
   };
 
+  const onFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      setFileStatus('No PDF selected.');
+      return;
+    }
+
+    setFileStatus(`Loading PDF: ${file.name}...`);
+    try {
+      const extractedText = await extractPdfText(file);
+      setSourceText(extractedText);
+      setPdfJsAvailable(true);
+      setFileStatus(`PDF text extraction succeeded (${file.name}, ${extractedText.length} chars).`);
+    } catch (error) {
+      setPdfJsAvailable(false);
+      setFileStatus(
+        `PDF text extraction failed for ${file.name}. You can continue with pasted text instead.`,
+      );
+      console.error(error);
+    }
+  };
+
   return (
     <div>
       <h2>Procurement Form Extractor</h2>
+
+      <fieldset>
+        <legend>Source Text</legend>
+        <label>
+          Upload PDF
+          <input type="file" accept="application/pdf" onChange={onFileChange} />
+        </label>
+        <p>{fileStatus}</p>
+        {pdfJsAvailable === false ? (
+          <p>
+            PDF extraction is currently unavailable; fallback input is pasted text in the box below.
+          </p>
+        ) : null}
+        <label>
+          Pasted / extracted text
+          <textarea
+            value={sourceText}
+            onChange={(e) => setSourceText(e.target.value)}
+            rows={8}
+          />
+        </label>
+      </fieldset>
 
       <fieldset>
         <legend>Header</legend>
