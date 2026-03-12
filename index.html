@@ -3,31 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Procurement Parser</title>
+    <title>Procurement Request Builder</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <main class="container">
-      <h1>Document Extraction</h1>
-      <p class="subtitle">Paste supplier document text to parse core procurement fields.</p>
+      <h1>Procurement Request Builder</h1>
+      <p class="subtitle">
+        Upload a quote (text file) and/or paste the content below, then generate your procurement request HTML file.
+      </p>
 
-      <label for="sourceText">Source document text</label>
-      <textarea id="sourceText" placeholder="Paste invoice / quote text here..."></textarea>
-      <button id="parseBtn">Parse Document</button>
+      <section class="panel">
+        <h2>1) Add your quote details</h2>
 
-      <section id="warningsPanel" class="panel hidden" aria-live="polite">
-        <h2>Warnings</h2>
-        <ul id="warningsList"></ul>
+        <label for="quoteFile">Upload quote file (TXT/CSV/MD)</label>
+        <input id="quoteFile" type="file" accept=".txt,.csv,.md,text/plain" />
+        <p id="fileStatus" class="helper">No file selected yet.</p>
+
+        <label for="sourceText">Or paste quote text</label>
+        <textarea id="sourceText" placeholder="Paste supplier quote text here..."></textarea>
+
+        <div class="actions">
+          <button id="generateBtn">Generate HTML file</button>
+        </div>
       </section>
 
       <section class="panel">
-        <h2>Parse Output</h2>
-        <pre id="output">{}</pre>
-      </section>
-
-      <section id="excerptPanel" class="panel hidden">
-        <h2>Source excerpt used for extraction</h2>
-        <pre id="sourceExcerpt"></pre>
+        <h2>2) Open your generated file</h2>
+        <p class="helper">Click the file below to open it in a new tab.</p>
+        <a id="htmlFileLink" class="file-link disabled" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">
+          procurement-request.html
+        </a>
       </section>
     </main>
 

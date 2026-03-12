@@ -1,11 +1,11 @@
 :root {
   font-family: Inter, system-ui, -apple-system, Segoe UI, sans-serif;
+  color: #0f172a;
 }
 
 body {
   margin: 0;
-  background: #f8fafc;
-  color: #0f172a;
+  background: #f1f5f9;
 }
 
 .container {
@@ -14,18 +14,48 @@ body {
   padding: 0 16px 24px;
 }
 
+h1 {
+  margin-bottom: 8px;
+}
+
 .subtitle {
+  margin-top: 0;
   color: #334155;
 }
 
+.panel {
+  background: white;
+  margin-top: 16px;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+label {
+  display: block;
+  font-weight: 600;
+  margin-top: 10px;
+  margin-bottom: 6px;
+}
+
+input[type='file'],
 textarea {
   width: 100%;
-  min-height: 220px;
-  margin-top: 8px;
-  margin-bottom: 12px;
-  padding: 12px;
-  border-radius: 8px;
   border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+}
+
+textarea {
+  min-height: 220px;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: wrap;
 }
 
 button {
@@ -35,26 +65,33 @@ button {
   color: white;
   padding: 10px 16px;
   cursor: pointer;
+  font-weight: 600;
 }
 
-.panel {
-  background: white;
-  margin-top: 16px;
-  border-radius: 10px;
-  padding: 14px;
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+.helper {
+  color: #475569;
+  margin: 8px 0 0;
 }
 
-pre {
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  margin: 0;
+.file-link {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid #94a3b8;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #1d4ed8;
+  text-decoration: none;
+  font-weight: 600;
 }
 
-#warningsPanel {
-  border-left: 4px solid #f59e0b;
+.file-link:hover {
+  background: #eef2ff;
 }
 
-.hidden {
-  display: none;
+.file-link.disabled {
+  pointer-events: none;
+  color: #64748b;
+  border-color: #cbd5e1;
+  background: #f8fafc;
 }
