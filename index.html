@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Procurement Parser</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Document Extraction</h1>
+      <p class="subtitle">Paste supplier document text to parse core procurement fields.</p>
+
+      <label for="sourceText">Source document text</label>
+      <textarea id="sourceText" placeholder="Paste invoice / quote text here..."></textarea>
+      <button id="parseBtn">Parse Document</button>
+
+      <section id="warningsPanel" class="panel hidden" aria-live="polite">
+        <h2>Warnings</h2>
+        <ul id="warningsList"></ul>
+      </section>
+
+      <section class="panel">
+        <h2>Parse Output</h2>
+        <pre id="output">{}</pre>
+      </section>
+
+      <section id="excerptPanel" class="panel hidden">
+        <h2>Source excerpt used for extraction</h2>
+        <pre id="sourceExcerpt"></pre>
+      </section>
+    </main>
+
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>
