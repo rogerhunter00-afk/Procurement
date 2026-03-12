@@ -7,6 +7,27 @@ const generateBtn = document.getElementById('generateBtn');
 const htmlFileLinkEl = document.getElementById('htmlFileLink');
 
 let generatedBlobUrl = null;
+let pdfJsLoadPromise = null;
+
+const PDFJS_CDN_VERSION = '4.10.38';
+const PDFJS_MODULE_URL = `https://unpkg.com/pdfjs-dist@${PDFJS_CDN_VERSION}/build/pdf.mjs`;
+const PDFJS_WORKER_URL = `https://unpkg.com/pdfjs-dist@${PDFJS_CDN_VERSION}/build/pdf.worker.mjs`;
+
+async function loadPdfJs() {
+  if (!pdfJsLoadPromise) {
+    pdfJsLoadPromise = import(/* @vite-ignore */ PDFJS_MODULE_URL)
+      .then((module) => {
+        module.GlobalWorkerOptions.workerSrc = PDFJS_WORKER_URL;
+        return module;
+      })
+      .catch((error) => {
+        pdfJsLoadPromise = null;
+        throw error;
+      });
+  }
+
+  return pdfJsLoadPromise;
+}
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -216,15 +237,41 @@ function updateGeneratedFileLink(html) {
 
 async function readUploadedText(file) {
   const isTextLike = file.type.startsWith('text/') || /\.(txt|csv|md)$/i.test(file.name);
-  if (!isTextLike) {
-    fileStatusEl.textContent = `"${file.name}" is not a supported text file. Please paste text manually.`;
+  const isPdf = file.type === 'application/pdf' || /\.pdf$/i.test(file.name);
+
+  if (isTextLike) {
+    fileStatusEl.textContent = `Reading ${file.name}...`;
+    const text = await file.text();
+    sourceTextEl.value = text;
+    fileStatusEl.textContent = `Loaded ${file.name} (${text.length} characters).`;
     return;
   }
 
-  fileStatusEl.textContent = `Reading ${file.name}...`;
-  const text = await file.text();
-  sourceTextEl.value = text;
-  fileStatusEl.textContent = `Loaded ${file.name} (${text.length} characters).`;
+  if (isPdf) {
+    fileStatusEl.textContent = `Extracting text from ${file.name}...`;
+    const pdfjs = await loadPdfJs();
+    const data = await file.arrayBuffer();
+    const pdf = await pdfjs.getDocument({ data }).promise;
+
+    const pages = [];
+    for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
+      const page = await pdf.getPage(pageNumber);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items
+        .map((item) => item.str ?? '')
+        .join(' ')
+        .trim();
+
+      pages.push(pageText);
+    }
+
+    const extractedText = pages.filter(Boolean).join('\n\n');
+    sourceTextEl.value = extractedText;
+    fileStatusEl.textContent = `Loaded ${file.name} (${extractedText.length} characters extracted from PDF).`;
+    return;
+  }
+
+  fileStatusEl.textContent = `"${file.name}" is not a supported file type. Please upload TXT/CSV/MD/PDF or paste text manually.`;
 }
 
 quoteFileEl.addEventListener('change', async (event) => {
