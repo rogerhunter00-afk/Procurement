@@ -20,3 +20,20 @@ test('extracts compact supplier name and focused item summary from OCR-heavy quo
   assert.equal(parsed.items.length, 1);
   assert.equal(parsed.items[0].description, '1 Washing machine repairs 1.');
 });
+
+test('maps parsed tabular quote data into qty/unit/line item fields', () => {
+  const source = [
+    'Supplier: Simply Bearings Ltd',
+    'Quote: 6502669',
+    '1 Dodge SC-17M Bearing Insert with 17mm Internal Diameter DODGE Please Allow 2-3 Working Days to Us £31.68 £31.68',
+    'Subtotal £31.68',
+  ].join('\n');
+
+  const parsed = parseDocument(source);
+
+  assert.equal(parsed.items.length, 1);
+  assert.equal(parsed.items[0].qty, 1);
+  assert.equal(parsed.items[0].unit, 31.68);
+  assert.equal(parsed.items[0].lineTotal, 31.68);
+  assert.equal(parsed.total, '£31.68');
+});

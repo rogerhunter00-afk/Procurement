@@ -1,3 +1,5 @@
+import { parseItems } from './parsing/index.mjs';
+
 const BOILERPLATE_PATTERNS = [
   /all rights reserved/gi,
   /this (document|communication) (is|may be) confidential/gi,
@@ -132,7 +134,19 @@ function inferReferenceId(text) {
   return refMatch?.[2] || '';
 }
 
-function inferItems(text) {
+function inferItems(text, parsedItems) {
+  const parsed = parsedItems ?? parseItems(text);
+  if (parsed.rows.length) {
+    return parsed.rows.map((row, index) => ({
+      line: index + 1,
+      description: row.description,
+      qty: row.qty,
+      unit: row.unit,
+      lineTotal: row.line,
+      source: row.source,
+    }));
+  }
+
   const sourceSegments = text.includes('\n')
     ? text.split('\n')
     : text.split(/(?<=\.)\s+(?=[A-Z])|\s+[•·-]\s+|(?=\b(?:Item Description|Subtotal|Total|VAT)\b)/i);
@@ -180,21 +194,30 @@ function inferItems(text) {
     .map((line, index) => ({
       line: index + 1,
       description: line.replace(/^item\s+description\s*(?:cost)?\s*/i, '').trim(),
+      qty: null,
+      unit: null,
+      lineTotal: null,
+      source: 'legacy',
     }));
 }
 
 export function parseDocument(sourceText) {
   const preprocessed = preprocessSourceText(sourceText);
   const text = preprocessed.text;
+  const parsedItems = parseItems(text);
 
   const result = {
     supplier: inferSupplier(text),
     total: inferTotal(text),
     referenceId: inferReferenceId(text),
-    items: inferItems(text),
+    items: inferItems(text, parsedItems),
     sourceExcerpt: preprocessed.excerpt,
     preprocessing: preprocessed.stats
   };
+
+  if (!result.total && parsedItems.detectedSubtotal !== null) {
+    result.total = String(parsedItems.detectedSubtotal.toFixed(2));
+  }
 
   const warnings = [];
 
