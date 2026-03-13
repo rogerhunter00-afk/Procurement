@@ -57,6 +57,12 @@ function asCurrencyNumber(value) {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function formatNumber(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return '-';
+  return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(2);
+}
+
 function inferTodayDate() {
   const now = new Date();
   const day = String(now.getDate()).padStart(2, '0');
@@ -77,10 +83,10 @@ function buildDocumentFromParse(parsed, sourceText) {
             <tr>
               <td>${index + 1}</td>
               <td>${displayOrPlaceholder(item.description, '[Item description]')}</td>
-              <td class="num">-</td>
-              <td class="num">-</td>
-              <td>${displayOrPlaceholder('Extracted from quote text', '[Notes]')}</td>
-              <td class="num">-</td>
+              <td class="num">${formatNumber(item.qty)}</td>
+              <td class="num">${formatNumber(item.unit)}</td>
+              <td>${displayOrPlaceholder(item.source === 'legacy' ? 'Extracted from quote text' : `Pattern: ${item.source}`, '[Notes]')}</td>
+              <td class="num">${formatNumber(item.lineTotal)}</td>
             </tr>
           `,
         )
@@ -267,9 +273,33 @@ async function readUploadedText(file) {
     for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber += 1) {
       const page = await pdf.getPage(pageNumber);
       const textContent = await page.getTextContent();
-      const pageText = textContent.items
-        .map((item) => item.str ?? '')
-        .join(' ')
+      const rows = textContent.items
+        .map((item) => ({
+          text: (item.str ?? '').trim(),
+          x: item.transform?.[4] ?? 0,
+          y: item.transform?.[5] ?? 0,
+        }))
+        .filter((item) => item.text);
+
+      rows.sort((a, b) => {
+        const yDiff = b.y - a.y;
+        if (Math.abs(yDiff) > 1.5) return yDiff;
+        return a.x - b.x;
+      });
+
+      const grouped = [];
+      for (const row of rows) {
+        const lastGroup = grouped[grouped.length - 1];
+        if (!lastGroup || Math.abs(lastGroup.y - row.y) > 1.5) {
+          grouped.push({ y: row.y, cells: [row] });
+        } else {
+          lastGroup.cells.push(row);
+        }
+      }
+
+      const pageText = grouped
+        .map((group) => group.cells.sort((a, b) => a.x - b.x).map((cell) => cell.text).join(' '))
+        .join('\n')
         .trim();
 
       pages.push(pageText);
