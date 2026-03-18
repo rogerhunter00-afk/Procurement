@@ -23,6 +23,41 @@
         <label for="sourceText">Or paste quote text</label>
         <textarea id="sourceText" placeholder="Paste supplier quote text here..."></textarea>
 
+        <section id="reviewPanel" class="review-panel" aria-live="polite">
+          <div class="review-panel-header">
+            <div>
+              <h3>Review extracted details</h3>
+              <p class="helper review-panel-copy">
+                Check the parsed supplier, reference, total, and item rows before generating the procurement file.
+              </p>
+            </div>
+            <div class="review-actions">
+              <button id="acceptParsedBtn" type="button" class="secondary-btn">Accept all extracted values</button>
+              <button id="resetReviewBtn" type="button" class="ghost-btn">Reset edits</button>
+            </div>
+          </div>
+
+          <p id="reviewStatus" class="review-status">Paste or upload quote text to see extracted fields and warnings.</p>
+
+          <div id="reviewFields" class="review-grid"></div>
+
+          <div class="review-items-block">
+            <div class="review-items-header">
+              <div>
+                <h4>Item rows</h4>
+                <p class="helper">Edit any extracted line items or add a missing row.</p>
+              </div>
+              <button id="addItemBtn" type="button" class="secondary-btn">Add item row</button>
+            </div>
+            <div id="reviewItems" class="review-items"></div>
+          </div>
+
+          <div class="review-warnings-block">
+            <h4>Parser warnings</h4>
+            <ul id="reviewWarnings" class="warning-list"></ul>
+          </div>
+        </section>
+
         <label for="requesterPreset">Requester</label>
         <select id="requesterPreset">
           <option value="jacek-lewandowski">Jacek Lewandowski - Group Operations Manager</option>
@@ -41,7 +76,7 @@
         </div>
 
         <div class="actions">
-          <button id="generateBtn">Generate HTML file</button>
+          <button id="generateBtn" type="button">Generate HTML file</button>
         </div>
       </section>
 
