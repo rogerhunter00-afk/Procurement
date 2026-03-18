@@ -333,14 +333,6 @@ button:hover {
   color: #1d4ed8;
 }
 
-.empty-state {
-  border: 1px dashed #cbd5e1;
-  border-radius: 12px;
-  padding: 14px;
-  background: #fff;
-  color: #475569;
-}
-
 @media (max-width: 700px) {
   .split-fields,
   .review-grid,

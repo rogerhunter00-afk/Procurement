@@ -397,6 +397,18 @@ function mergeReviewForm(parsed) {
   };
 }
 
+function resetReviewState(parsed = latestParsed) {
+  reviewEditState = createEditState();
+  reviewForm = createReviewFormFromParsed(parsed);
+  reviewAccepted = false;
+}
+
+function applySourceText(text) {
+  sourceTextEl.value = text;
+  reviewEditState = createEditState();
+  reparseSourceIntoReview();
+}
+
 function getParsedWarningsForField(field) {
   return (latestParsed.warnings ?? []).filter((warning) => warning.field === field);
 }
@@ -683,8 +695,7 @@ async function readUploadedText(file) {
   if (isTextLike) {
     fileStatusEl.textContent = `Reading ${file.name}...`;
     const text = await file.text();
-    sourceTextEl.value = text;
-    reparseSourceIntoReview();
+    applySourceText(text);
     fileStatusEl.textContent = `Loaded ${file.name} (${text.length} characters).`;
     return;
   }
@@ -732,8 +743,7 @@ async function readUploadedText(file) {
     }
 
     const extractedText = pages.filter(Boolean).join('\n\n');
-    sourceTextEl.value = extractedText;
-    reparseSourceIntoReview();
+    applySourceText(extractedText);
     fileStatusEl.textContent = `Loaded ${file.name} (${extractedText.length} characters extracted from PDF).`;
     return;
   }
@@ -807,9 +817,7 @@ acceptParsedBtn.addEventListener('click', () => {
 });
 
 resetReviewBtn.addEventListener('click', () => {
-  reviewEditState = createEditState();
-  reviewForm = createReviewFormFromParsed(latestParsed);
-  reviewAccepted = false;
+  resetReviewState();
   renderReviewPanel();
 });
 
@@ -827,7 +835,7 @@ window.addEventListener('beforeunload', () => {
   }
 });
 
-sourceTextEl.value = `Supplier: Apex Industrial LLC
+const SAMPLE_SOURCE_TEXT = `Supplier: Apex Industrial LLC
 Quote: Q-2024-0930
 Date: 2024-09-30
 Widget A | Qty 4 | Unit Price $120.00 | Amount $480.00
@@ -836,6 +844,5 @@ Total: $670.00`;
 
 requesterPresetEl.addEventListener('change', syncRequesterInputs);
 syncRequesterInputs();
-reviewEditState = createEditState();
-reparseSourceIntoReview();
+applySourceText(SAMPLE_SOURCE_TEXT);
 setFileLinkDisabledState(true);
