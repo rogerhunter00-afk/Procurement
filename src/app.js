@@ -4,6 +4,7 @@ const sourceTextEl = document.getElementById('sourceText');
 const quoteFileEl = document.getElementById('quoteFile');
 const fileStatusEl = document.getElementById('fileStatus');
 const generateBtn = document.getElementById('generateBtn');
+const reextractBtn = document.getElementById('reextractBtn');
 const htmlFileLinkEl = document.getElementById('htmlFileLink');
 const requesterPresetEl = document.getElementById('requesterPreset');
 const customRequesterNameEl = document.getElementById('customRequesterName');
@@ -159,8 +160,8 @@ function buildDocumentFromParse(parsed, sourceText, requester) {
   const vat = Math.round(subtotal * 0.2 * 100) / 100;
   const totalIncVat = Math.round((subtotal + vat) * 100) / 100;
 
-  const rows = (parsed.items ?? []).length
-    ? parsed.items
+  const rows = selectedItems.length
+    ? selectedItems
         .map(
           (item, index) => `
             <tr>
@@ -261,7 +262,7 @@ function buildDocumentFromParse(parsed, sourceText, requester) {
     <img src="${INLINE_LOGO_DATA_URI}" alt="Aberdeen Laundry Services"/>
     <div>
       <p class="title">Internal Supply Request</p>
-      <p class="subtitle">${displayOrPlaceholder(parsed.referenceId, '[Request title / reference]')}</p>
+      <p class="subtitle">${displayOrPlaceholder(reviewedValues.referenceId ?? parsed.referenceId, '[Request title / reference]')}</p>
     </div>
     <table class="meta-table">
       <tr><th>Form #</th><td>ALS-SUP-REQ</td></tr>
@@ -310,6 +311,35 @@ function buildDocumentFromParse(parsed, sourceText, requester) {
 </body>
 </html>`;
 }
+
+function applyAutoValue(fieldKey, nextValue, force = false) {
+  const fieldState = reviewedFieldState.get(fieldKey);
+  if (!fieldState) return;
+
+  fieldState.lastAutoValue = nextValue;
+  if (fieldState.overridden && !force) {
+    return;
+  }
+
+  isApplyingAutoFill = true;
+  fieldState.el.value = nextValue;
+  fieldState.overridden = false;
+  isApplyingAutoFill = false;
+}
+
+function updateReviewedFieldsFromParse(parsed, { force = false } = {}) {
+  applyAutoValue('supplier', parsed.supplier ?? '', force);
+  applyAutoValue('reference', parsed.referenceId ?? '', force);
+  applyAutoValue('summary', parsed.sourceExcerpt ?? '', force);
+  applyAutoValue('items', serializeItems(parsed.items ?? []), force);
+}
+
+function refreshParsedPreview({ force = false } = {}) {
+  latestParsedDocument = parseDocument(sourceTextEl.value.trim());
+  updateReviewedFieldsFromParse(latestParsedDocument, { force });
+}
+
+const debouncedRefreshParsedPreview = debounce(() => refreshParsedPreview(), 300);
 
 function setFileLinkDisabledState(isDisabled) {
   if (isDisabled) {
@@ -825,7 +855,8 @@ generateBtn.addEventListener('click', () => {
   const sourceText = sourceTextEl.value.trim();
   const parsed = getReviewedParsedData();
   const requester = getRequesterDetails();
-  const generatedHtml = buildDocumentFromParse(parsed, sourceText, requester);
+  const reviewedValues = getReviewedValues(latestParsedDocument);
+  const generatedHtml = buildDocumentFromParse(latestParsedDocument, sourceText, requester, reviewedValues);
   updateGeneratedFileLink(generatedHtml);
 });
 

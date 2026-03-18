@@ -339,4 +339,9 @@ button:hover {
   .review-item-grid {
     grid-template-columns: 1fr;
   }
+
+  .review-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
