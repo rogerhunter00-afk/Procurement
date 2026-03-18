@@ -3,6 +3,12 @@
   color: #0f172a;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 body {
   margin: 0;
   background: #f1f5f9;
