@@ -21,6 +21,7 @@ let pdfJsLoadPromise = null;
 let latestParsed = createParsedFallback();
 let reviewForm = createReviewFormFromParsed(latestParsed);
 let reviewAccepted = false;
+let reviewEditState = createEditState();
 
 const PDFJS_CDN_VERSION = '4.10.38';
 const PDFJS_MODULE_URL = `https://unpkg.com/pdfjs-dist@${PDFJS_CDN_VERSION}/build/pdf.mjs`;
@@ -377,6 +378,25 @@ function createReviewFormFromParsed(parsed) {
   };
 }
 
+function createEditState() {
+  return {
+    supplier: false,
+    referenceId: false,
+    total: false,
+    items: false,
+  };
+}
+
+function mergeReviewForm(parsed) {
+  const parsedForm = createReviewFormFromParsed(parsed);
+  return {
+    supplier: reviewEditState.supplier ? reviewForm.supplier : parsedForm.supplier,
+    referenceId: reviewEditState.referenceId ? reviewForm.referenceId : parsedForm.referenceId,
+    total: reviewEditState.total ? reviewForm.total : parsedForm.total,
+    items: reviewEditState.items ? reviewForm.items.map(normalizeItemForForm) : parsedForm.items,
+  };
+}
+
 function getParsedWarningsForField(field) {
   return (latestParsed.warnings ?? []).filter((warning) => warning.field === field);
 }
@@ -624,7 +644,7 @@ function renderReviewPanel() {
 function reparseSourceIntoReview() {
   const sourceText = sourceTextEl.value.trim();
   latestParsed = sourceText ? parseDocument(sourceText) : createParsedFallback();
-  reviewForm = createReviewFormFromParsed(latestParsed);
+  reviewForm = mergeReviewForm(latestParsed);
   reviewAccepted = false;
   renderReviewPanel();
 }
@@ -744,6 +764,7 @@ reviewFieldsEl.addEventListener('change', (event) => {
   const field = event.target.dataset.field;
   if (!field) return;
   reviewForm[field] = event.target.value;
+  reviewEditState[field] = true;
   reviewAccepted = false;
   renderReviewPanel();
 });
@@ -755,6 +776,7 @@ reviewItemsEl.addEventListener('change', (event) => {
   if (!Number.isInteger(index) || !reviewForm.items[index]) return;
   reviewForm.items[index][itemField] = event.target.value;
   reviewForm.items[index].source = 'manual';
+  reviewEditState.items = true;
   reviewAccepted = false;
   renderReviewPanel();
 });
@@ -767,23 +789,25 @@ reviewItemsEl.addEventListener('click', (event) => {
   if (!reviewForm.items.length) {
     reviewForm.items = [createEmptyItem()];
   }
+  reviewEditState.items = true;
   reviewAccepted = false;
   renderReviewPanel();
 });
 
 addItemBtn.addEventListener('click', () => {
   reviewForm.items.push(createEmptyItem());
+  reviewEditState.items = true;
   reviewAccepted = false;
   renderReviewPanel();
 });
 
 acceptParsedBtn.addEventListener('click', () => {
-  reviewForm = createReviewFormFromParsed(latestParsed);
   reviewAccepted = true;
   renderReviewPanel();
 });
 
 resetReviewBtn.addEventListener('click', () => {
+  reviewEditState = createEditState();
   reviewForm = createReviewFormFromParsed(latestParsed);
   reviewAccepted = false;
   renderReviewPanel();
@@ -812,5 +836,6 @@ Total: $670.00`;
 
 requesterPresetEl.addEventListener('change', syncRequesterInputs);
 syncRequesterInputs();
+reviewEditState = createEditState();
 reparseSourceIntoReview();
 setFileLinkDisabledState(true);
