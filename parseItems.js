@@ -1,4 +1,4 @@
-function normalizeOcrText(text) {
+export function normalizeOcrText(text) {
   return text
     .replace(/\r/g, "\n")
     .replace(/[\u00A0\t]+/g, " ")
@@ -10,7 +10,7 @@ function normalizeOcrText(text) {
     .trim();
 }
 
-function parseNumber(raw) {
+export function parseNumber(raw) {
   if (!raw) return null;
   const cleaned = raw
     .replace(/[^\d,.-]/g, "")
@@ -117,7 +117,7 @@ function parseFallbackSingleLine(line) {
   };
 }
 
-function parseItems(text) {
+export function parseItems(text) {
   const normalized = normalizeOcrText(text || "");
   const lines = normalized
     .split("\n")
@@ -172,8 +172,10 @@ function parseItems(text) {
   };
 }
 
-module.exports = {
+const parseItemsModule = {
   parseItems,
   normalizeOcrText,
   parseNumber
 };
+
+export default parseItemsModule;
