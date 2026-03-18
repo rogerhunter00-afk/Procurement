@@ -23,6 +23,36 @@
         <label for="sourceText">Or paste quote text</label>
         <textarea id="sourceText" placeholder="Paste supplier quote text here..."></textarea>
 
+        <div class="review-header">
+          <div>
+            <h3>Review extracted values</h3>
+            <p class="helper review-helper">These fields update from the source text after a short pause. Manual edits are preserved until you re-extract.</p>
+          </div>
+          <button id="reextractBtn" type="button" class="secondary-button">Re-extract</button>
+        </div>
+
+        <div class="split-fields">
+          <div>
+            <label for="supplierField">Supplier</label>
+            <input id="supplierField" type="text" placeholder="Review supplier name" />
+          </div>
+          <div>
+            <label for="referenceField">Reference</label>
+            <input id="referenceField" type="text" placeholder="Review quote/invoice reference" />
+          </div>
+        </div>
+
+        <label for="summaryField">Summary</label>
+        <textarea id="summaryField" class="review-textarea" placeholder="Review extracted summary"></textarea>
+
+        <label for="lineItemsField">Line items</label>
+        <textarea
+          id="lineItemsField"
+          class="review-textarea line-items"
+          placeholder="One item per line: description | qty | unit | notes | line total"
+        ></textarea>
+        <p class="helper">Format each item as: description | qty | unit | notes | line total.</p>
+
         <label for="requesterPreset">Requester</label>
         <select id="requesterPreset">
           <option value="jacek-lewandowski">Jacek Lewandowski - Group Operations Manager</option>

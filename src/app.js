@@ -4,13 +4,20 @@ const sourceTextEl = document.getElementById('sourceText');
 const quoteFileEl = document.getElementById('quoteFile');
 const fileStatusEl = document.getElementById('fileStatus');
 const generateBtn = document.getElementById('generateBtn');
+const reextractBtn = document.getElementById('reextractBtn');
 const htmlFileLinkEl = document.getElementById('htmlFileLink');
 const requesterPresetEl = document.getElementById('requesterPreset');
 const customRequesterNameEl = document.getElementById('customRequesterName');
 const customRequesterTitleEl = document.getElementById('customRequesterTitle');
+const supplierFieldEl = document.getElementById('supplierField');
+const referenceFieldEl = document.getElementById('referenceField');
+const summaryFieldEl = document.getElementById('summaryField');
+const lineItemsFieldEl = document.getElementById('lineItemsField');
 
 let generatedBlobUrl = null;
 let pdfJsLoadPromise = null;
+let latestParsedDocument = parseDocument('');
+let isApplyingAutoFill = false;
 
 const PDFJS_CDN_VERSION = '4.10.38';
 const PDFJS_MODULE_URL = `https://unpkg.com/pdfjs-dist@${PDFJS_CDN_VERSION}/build/pdf.mjs`;
@@ -23,6 +30,24 @@ const INLINE_LOGO_DATA_URI = `data:image/svg+xml,${encodeURIComponent(
     <text x="270" y="160" font-family="Arial, Helvetica, sans-serif" font-size="64" fill="#0a2a84" font-weight="500">services</text>
   </svg>`,
 )}`;
+
+const reviewedFieldState = new Map([
+  ['supplier', { el: supplierFieldEl, overridden: false, lastAutoValue: '' }],
+  ['reference', { el: referenceFieldEl, overridden: false, lastAutoValue: '' }],
+  ['summary', { el: summaryFieldEl, overridden: false, lastAutoValue: '' }],
+  ['items', { el: lineItemsFieldEl, overridden: false, lastAutoValue: '' }],
+]);
+
+function debounce(callback, delay = 250) {
+  let timeoutId = null;
+
+  return (...args) => {
+    window.clearTimeout(timeoutId);
+    timeoutId = window.setTimeout(() => {
+      callback(...args);
+    }, delay);
+  };
+}
 
 async function loadPdfJs() {
   if (!pdfJsLoadPromise) {
@@ -108,13 +133,82 @@ function inferTodayDate() {
   return `${day}/${month}/${year}`;
 }
 
-function buildDocumentFromParse(parsed, sourceText, requester) {
+function formatItemNotes(item) {
+  if (item?.notes) {
+    return item.notes;
+  }
+
+  if (item?.source === 'legacy') {
+    return 'Extracted from quote text';
+  }
+
+  if (item?.source) {
+    return `Pattern: ${item.source}`;
+  }
+
+  return '';
+}
+
+function serializeItems(items) {
+  return (items ?? [])
+    .map((item) => [
+      item.description ?? '',
+      item.qty ?? '',
+      item.unit ?? '',
+      formatItemNotes(item),
+      item.lineTotal ?? '',
+    ].join(' | '))
+    .join('\n');
+}
+
+function parseReviewedItems(value, fallbackItems = []) {
+  const trimmed = String(value ?? '').trim();
+  if (!trimmed) {
+    return fallbackItems;
+  }
+
+  return trimmed
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      const [description = '', qty = '', unit = '', notes = '', lineTotal = ''] = line.split('|').map((part) => part.trim());
+      return {
+        line: index + 1,
+        description,
+        qty: qty || null,
+        unit: unit || null,
+        notes,
+        lineTotal: lineTotal || null,
+        source: '',
+      };
+    });
+}
+
+function getReviewedValues(parsed) {
+  const supplierState = reviewedFieldState.get('supplier');
+  const referenceState = reviewedFieldState.get('reference');
+  const summaryState = reviewedFieldState.get('summary');
+  const itemsState = reviewedFieldState.get('items');
+
+  return {
+    supplier: supplierState?.overridden ? supplierFieldEl.value.trim() : (supplierFieldEl.value.trim() || parsed.supplier),
+    referenceId: referenceState?.overridden ? referenceFieldEl.value.trim() : (referenceFieldEl.value.trim() || parsed.referenceId),
+    summary: summaryState?.overridden ? summaryFieldEl.value.trim() : (summaryFieldEl.value.trim() || parsed.sourceExcerpt),
+    items: itemsState?.overridden
+      ? parseReviewedItems(lineItemsFieldEl.value, [])
+      : parseReviewedItems(lineItemsFieldEl.value, parsed.items ?? []),
+  };
+}
+
+function buildDocumentFromParse(parsed, sourceText, requester, reviewedValues = {}) {
+  const selectedItems = reviewedValues.items ?? parsed.items ?? [];
   const subtotal = asCurrencyNumber(parsed.total);
   const vat = Math.round(subtotal * 0.2 * 100) / 100;
   const totalIncVat = Math.round((subtotal + vat) * 100) / 100;
 
-  const rows = (parsed.items ?? []).length
-    ? parsed.items
+  const rows = selectedItems.length
+    ? selectedItems
         .map(
           (item, index) => `
             <tr>
@@ -122,7 +216,7 @@ function buildDocumentFromParse(parsed, sourceText, requester) {
               <td>${displayOrPlaceholder(item.description, '[Item description]')}</td>
               <td class="num">${formatNumber(item.qty)}</td>
               <td class="num">${formatNumber(item.unit)}</td>
-              <td>${displayOrPlaceholder(item.source === 'legacy' ? 'Extracted from quote text' : `Pattern: ${item.source}`, '[Notes]')}</td>
+              <td>${displayOrPlaceholder(formatItemNotes(item), '[Notes]')}</td>
               <td class="num">${formatNumber(item.lineTotal)}</td>
             </tr>
           `,
@@ -215,7 +309,7 @@ function buildDocumentFromParse(parsed, sourceText, requester) {
     <img src="${INLINE_LOGO_DATA_URI}" alt="Aberdeen Laundry Services"/>
     <div>
       <p class="title">Internal Supply Request</p>
-      <p class="subtitle">${displayOrPlaceholder(parsed.referenceId, '[Request title / reference]')}</p>
+      <p class="subtitle">${displayOrPlaceholder(reviewedValues.referenceId ?? parsed.referenceId, '[Request title / reference]')}</p>
     </div>
     <table class="meta-table">
       <tr><th>Form #</th><td>ALS-SUP-REQ</td></tr>
@@ -229,9 +323,9 @@ function buildDocumentFromParse(parsed, sourceText, requester) {
     <h2>Requester &amp; Supplier</h2>
     <div class="kv"><div class="label">Requester Name</div><div>${displayOrPlaceholder(requester.name, '[Requester name]')}</div></div>
     <div class="kv"><div class="label">Requester Title</div><div>${displayOrPlaceholder(requester.title, '[Requester job title]')}</div></div>
-    <div class="kv"><div class="label">Supplier</div><div>${displayOrPlaceholder(parsed.supplier, '[Supplier name]')}</div></div>
-    <div class="kv"><div class="label">Reference</div><div>${displayOrPlaceholder(parsed.referenceId, '[Quote/Invoice reference]')}</div></div>
-    <div class="kv"><div class="label">Summary</div><div>Auto-generated from uploaded/pasted quote text.</div></div>
+    <div class="kv"><div class="label">Supplier</div><div>${displayOrPlaceholder(reviewedValues.supplier ?? parsed.supplier, '[Supplier name]')}</div></div>
+    <div class="kv"><div class="label">Reference</div><div>${displayOrPlaceholder(reviewedValues.referenceId ?? parsed.referenceId, '[Quote/Invoice reference]')}</div></div>
+    <div class="kv"><div class="label">Summary</div><div>${displayOrPlaceholder(reviewedValues.summary ?? parsed.sourceExcerpt, '[Add summary]')}</div></div>
   </div>
 
   <div class="card">
@@ -264,6 +358,35 @@ function buildDocumentFromParse(parsed, sourceText, requester) {
 </body>
 </html>`;
 }
+
+function applyAutoValue(fieldKey, nextValue, force = false) {
+  const fieldState = reviewedFieldState.get(fieldKey);
+  if (!fieldState) return;
+
+  fieldState.lastAutoValue = nextValue;
+  if (fieldState.overridden && !force) {
+    return;
+  }
+
+  isApplyingAutoFill = true;
+  fieldState.el.value = nextValue;
+  fieldState.overridden = false;
+  isApplyingAutoFill = false;
+}
+
+function updateReviewedFieldsFromParse(parsed, { force = false } = {}) {
+  applyAutoValue('supplier', parsed.supplier ?? '', force);
+  applyAutoValue('reference', parsed.referenceId ?? '', force);
+  applyAutoValue('summary', parsed.sourceExcerpt ?? '', force);
+  applyAutoValue('items', serializeItems(parsed.items ?? []), force);
+}
+
+function refreshParsedPreview({ force = false } = {}) {
+  latestParsedDocument = parseDocument(sourceTextEl.value.trim());
+  updateReviewedFieldsFromParse(latestParsedDocument, { force });
+}
+
+const debouncedRefreshParsedPreview = debounce(() => refreshParsedPreview(), 300);
 
 function setFileLinkDisabledState(isDisabled) {
   if (isDisabled) {
@@ -298,6 +421,7 @@ async function readUploadedText(file) {
     fileStatusEl.textContent = `Reading ${file.name}...`;
     const text = await file.text();
     sourceTextEl.value = text;
+    sourceTextEl.dispatchEvent(new Event('input', { bubbles: true }));
     fileStatusEl.textContent = `Loaded ${file.name} (${text.length} characters).`;
     return;
   }
@@ -346,6 +470,7 @@ async function readUploadedText(file) {
 
     const extractedText = pages.filter(Boolean).join('\n\n');
     sourceTextEl.value = extractedText;
+    sourceTextEl.dispatchEvent(new Event('input', { bubbles: true }));
     fileStatusEl.textContent = `Loaded ${file.name} (${extractedText.length} characters extracted from PDF).`;
     return;
   }
@@ -368,11 +493,30 @@ quoteFileEl.addEventListener('change', async (event) => {
   }
 });
 
+sourceTextEl.addEventListener('input', () => {
+  debouncedRefreshParsedPreview();
+});
+
+for (const fieldState of reviewedFieldState.values()) {
+  fieldState.el.addEventListener('input', () => {
+    if (isApplyingAutoFill) {
+      return;
+    }
+
+    fieldState.overridden = true;
+  });
+}
+
+reextractBtn.addEventListener('click', () => {
+  refreshParsedPreview({ force: true });
+});
+
 generateBtn.addEventListener('click', () => {
   const sourceText = sourceTextEl.value.trim();
-  const parsed = parseDocument(sourceText);
+  latestParsedDocument = parseDocument(sourceText);
   const requester = getRequesterDetails();
-  const generatedHtml = buildDocumentFromParse(parsed, sourceText, requester);
+  const reviewedValues = getReviewedValues(latestParsedDocument);
+  const generatedHtml = buildDocumentFromParse(latestParsedDocument, sourceText, requester, reviewedValues);
   updateGeneratedFileLink(generatedHtml);
 });
 
@@ -391,5 +535,6 @@ Total: $670.00`;
 
 requesterPresetEl.addEventListener('change', syncRequesterInputs);
 syncRequesterInputs();
+refreshParsedPreview({ force: true });
 
 setFileLinkDisabledState(true);
