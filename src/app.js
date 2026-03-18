@@ -5,6 +5,9 @@ const quoteFileEl = document.getElementById('quoteFile');
 const fileStatusEl = document.getElementById('fileStatus');
 const generateBtn = document.getElementById('generateBtn');
 const htmlFileLinkEl = document.getElementById('htmlFileLink');
+const requesterPresetEl = document.getElementById('requesterPreset');
+const customRequesterNameEl = document.getElementById('customRequesterName');
+const customRequesterTitleEl = document.getElementById('customRequesterTitle');
 
 let generatedBlobUrl = null;
 let pdfJsLoadPromise = null;
@@ -63,6 +66,40 @@ function formatNumber(value) {
   return Number.isInteger(numeric) ? String(numeric) : numeric.toFixed(2);
 }
 
+const PRESET_REQUESTERS = {
+  'jacek-lewandowski': {
+    name: 'Jacek Lewandowski',
+    title: 'Group Operations Manager',
+  },
+};
+
+function getRequesterDetails() {
+  const selectedRequester = requesterPresetEl.value;
+
+  if (selectedRequester === 'custom') {
+    return {
+      name: customRequesterNameEl.value.trim(),
+      title: customRequesterTitleEl.value.trim(),
+    };
+  }
+
+  return PRESET_REQUESTERS[selectedRequester] ?? { name: '', title: '' };
+}
+
+function syncRequesterInputs() {
+  const selectedRequester = requesterPresetEl.value;
+  const isCustom = selectedRequester === 'custom';
+
+  customRequesterNameEl.disabled = !isCustom;
+  customRequesterTitleEl.disabled = !isCustom;
+
+  if (isCustom) return;
+
+  const preset = PRESET_REQUESTERS[selectedRequester];
+  customRequesterNameEl.value = preset?.name ?? '';
+  customRequesterTitleEl.value = preset?.title ?? '';
+}
+
 function inferTodayDate() {
   const now = new Date();
   const day = String(now.getDate()).padStart(2, '0');
@@ -71,7 +108,7 @@ function inferTodayDate() {
   return `${day}/${month}/${year}`;
 }
 
-function buildDocumentFromParse(parsed, sourceText) {
+function buildDocumentFromParse(parsed, sourceText, requester) {
   const subtotal = asCurrencyNumber(parsed.total);
   const vat = Math.round(subtotal * 0.2 * 100) / 100;
   const totalIncVat = Math.round((subtotal + vat) * 100) / 100;
@@ -190,6 +227,8 @@ function buildDocumentFromParse(parsed, sourceText) {
 
   <div class="card">
     <h2>Requester &amp; Supplier</h2>
+    <div class="kv"><div class="label">Requester Name</div><div>${displayOrPlaceholder(requester.name, '[Requester name]')}</div></div>
+    <div class="kv"><div class="label">Requester Title</div><div>${displayOrPlaceholder(requester.title, '[Requester job title]')}</div></div>
     <div class="kv"><div class="label">Supplier</div><div>${displayOrPlaceholder(parsed.supplier, '[Supplier name]')}</div></div>
     <div class="kv"><div class="label">Reference</div><div>${displayOrPlaceholder(parsed.referenceId, '[Quote/Invoice reference]')}</div></div>
     <div class="kv"><div class="label">Summary</div><div>Auto-generated from uploaded/pasted quote text.</div></div>
@@ -332,7 +371,8 @@ quoteFileEl.addEventListener('change', async (event) => {
 generateBtn.addEventListener('click', () => {
   const sourceText = sourceTextEl.value.trim();
   const parsed = parseDocument(sourceText);
-  const generatedHtml = buildDocumentFromParse(parsed, sourceText);
+  const requester = getRequesterDetails();
+  const generatedHtml = buildDocumentFromParse(parsed, sourceText, requester);
   updateGeneratedFileLink(generatedHtml);
 });
 
@@ -348,5 +388,8 @@ Date: 2024-09-30
 Widget A | Qty 4 | Unit Price $120.00 | Amount $480.00
 Widget B | Qty 2 | Unit Price $95.00 | Amount $190.00
 Total: $670.00`;
+
+requesterPresetEl.addEventListener('change', syncRequesterInputs);
+syncRequesterInputs();
 
 setFileLinkDisabledState(true);

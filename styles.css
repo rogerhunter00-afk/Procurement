@@ -39,6 +39,8 @@ label {
 }
 
 input[type='file'],
+input[type='text'],
+select,
 textarea {
   width: 100%;
   border: 1px solid #cbd5e1;
@@ -94,4 +96,16 @@ button {
   color: #64748b;
   border-color: #cbd5e1;
   background: #f8fafc;
+}
+
+.split-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+@media (max-width: 700px) {
+  .split-fields {
+    grid-template-columns: 1fr;
+  }
 }
