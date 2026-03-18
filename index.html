@@ -23,6 +23,23 @@
         <label for="sourceText">Or paste quote text</label>
         <textarea id="sourceText" placeholder="Paste supplier quote text here..."></textarea>
 
+        <label for="requesterPreset">Requester</label>
+        <select id="requesterPreset">
+          <option value="jacek-lewandowski">Jacek Lewandowski - Group Operations Manager</option>
+          <option value="custom">Other (enter below)</option>
+        </select>
+
+        <div class="split-fields">
+          <div>
+            <label for="customRequesterName">Custom requester name</label>
+            <input id="customRequesterName" type="text" placeholder="Enter requester name" />
+          </div>
+          <div>
+            <label for="customRequesterTitle">Custom requester job title</label>
+            <input id="customRequesterTitle" type="text" placeholder="Enter requester job title" />
+          </div>
+        </div>
+
         <div class="actions">
           <button id="generateBtn">Generate HTML file</button>
         </div>
