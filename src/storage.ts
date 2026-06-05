@@ -55,33 +55,9 @@ export const createSeedData = (): AppData => ({
   ],
 });
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
-
-const isValidCage = (value: unknown): value is Cage =>
-  isRecord(value) &&
-  typeof value.cageId === 'string' &&
-  typeof value.site === 'string' &&
-  typeof value.status === 'string' &&
-  typeof value.currentLocation === 'string';
-
-const isValidOrder = (value: unknown): value is Order =>
-  isRecord(value) &&
-  typeof value.orderId === 'string' &&
-  typeof value.customerName === 'string' &&
-  typeof value.route === 'string' &&
-  typeof value.deliveryDate === 'string' &&
-  typeof value.expectedCages === 'number' &&
-  typeof value.status === 'string';
-
-const isValidEvent = (value: unknown): value is ScanEvent =>
-  isRecord(value) &&
-  typeof value.eventId === 'string' &&
-  typeof value.timestamp === 'string' &&
-  typeof value.action === 'string' &&
-  typeof value.operatorName === 'string';
-
-const parseStoredData = (raw: string): AppData | null => {
+export const loadData = (): AppData => {
+  const raw = safeGetItem(STORAGE_KEY);
+  if (!raw) return createSeedData();
   try {
     const parsed = JSON.parse(raw) as Partial<AppData>;
     if (!Array.isArray(parsed.cages) || !Array.isArray(parsed.orders) || !Array.isArray(parsed.events)) {
