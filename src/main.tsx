@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 import { ScannerInput } from './ScannerInput';
-import { createSeedData, exportFilename, isAppData, loadData, newEvent, saveData } from './storage';
+import { createSeedData, exportFilename, isAppData, loadData, newEvent, safeGetItem, safeSetItem, saveData } from './storage';
 import type { AppData, Cage, LocationName, Order, OrderStatus, ScanEvent } from './types';
 import { LOCATIONS } from './types';
 
@@ -33,7 +33,8 @@ const screens: Screen[] = [
 ];
 
 const supervisorReasons = ['Short order approved', 'Cage held back', 'Rewash required', 'Customer cancelled item', 'Other'];
-const operatorDefault = localStorage.getItem('laundry-cage-tracker-operator') || 'Operator';
+const OPERATOR_STORAGE_KEY = 'laundry-cage-tracker-operator';
+const operatorDefault = safeGetItem(OPERATOR_STORAGE_KEY) || 'Operator';
 
 const normaliseId = (id: string) => id.trim().toUpperCase();
 
@@ -76,7 +77,7 @@ function App() {
       saveData(recalculated);
       return recalculated;
     });
-    localStorage.setItem('laundry-cage-tracker-operator', operatorName);
+    safeSetItem(OPERATOR_STORAGE_KEY, operatorName);
     if (nextBanner) setBanner(nextBanner);
   }
 
@@ -212,7 +213,7 @@ function SimpleCageAction({ data, title, actionLabel, targetStatus, targetLocati
     if (!cage) return alert('STOP: Cage does not exist.');
     const validation = validate(cage);
     if (validation) return alert(`STOP: ${validation}`);
-    commit((current) => ({ ...current, cages: current.cages.map((item) => item.cageId === cage.cageId ? { ...item, status: targetStatus, currentLocation: targetLocation, linkedOrderId: clearOrder ? undefined : item.linkedOrderId, lastScannedAt: new Date().toISOString(), lastScannedBy: localStorage.getItem('laundry-cage-tracker-operator') || 'Operator' } : item), events: [...current.events, newEvent({ action: eventAction, cageId: cage.cageId, orderId: cage.linkedOrderId, location: targetLocation, operatorName: localStorage.getItem('laundry-cage-tracker-operator') || 'Operator', notes: `${title} completed.` })] }), { type: 'success', message: `${cage.cageId} updated to ${targetStatus}.` });
+    commit((current) => ({ ...current, cages: current.cages.map((item) => item.cageId === cage.cageId ? { ...item, status: targetStatus, currentLocation: targetLocation, linkedOrderId: clearOrder ? undefined : item.linkedOrderId, lastScannedAt: new Date().toISOString(), lastScannedBy: safeGetItem(OPERATOR_STORAGE_KEY) || 'Operator' } : item), events: [...current.events, newEvent({ action: eventAction, cageId: cage.cageId, orderId: cage.linkedOrderId, location: targetLocation, operatorName: safeGetItem(OPERATOR_STORAGE_KEY) || 'Operator', notes: `${title} completed.` })] }), { type: 'success', message: `${cage.cageId} updated to ${targetStatus}.` });
   }}>{actionLabel}</button></section>;
 }
 

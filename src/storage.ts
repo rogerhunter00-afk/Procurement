@@ -4,6 +4,30 @@ export const STORAGE_KEY = 'laundry-cage-tracker-data-v1';
 
 const today = new Date().toISOString().slice(0, 10);
 
+const createEventId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+
+  return `event-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+};
+
+export const safeGetItem = (key: string) => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+export const safeSetItem = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // Keep the proof-of-concept usable even if browser storage is disabled.
+  }
+};
+
 export const seedCages: Cage[] = ['001', '002', '003', '004', '005'].map((id) => ({
   cageId: `CAGE-EK-${id}`,
   site: 'Main Laundry',
@@ -22,7 +46,7 @@ export const createSeedData = (): AppData => ({
   orders: seedOrders,
   events: [
     {
-      eventId: crypto.randomUUID(),
+      eventId: createEventId(),
       timestamp: new Date().toISOString(),
       action: 'Seeded',
       operatorName: 'System',
@@ -32,7 +56,7 @@ export const createSeedData = (): AppData => ({
 });
 
 export const loadData = (): AppData => {
-  const raw = localStorage.getItem(STORAGE_KEY);
+  const raw = safeGetItem(STORAGE_KEY);
   if (!raw) return createSeedData();
   try {
     const parsed = JSON.parse(raw) as AppData;
@@ -46,7 +70,7 @@ export const loadData = (): AppData => {
 };
 
 export const saveData = (data: AppData) => {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  safeSetItem(STORAGE_KEY, JSON.stringify(data));
 };
 
 export const exportFilename = () => `laundry-cage-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`;
@@ -58,7 +82,7 @@ export const isAppData = (value: unknown): value is AppData => {
 };
 
 export const newEvent = (event: Omit<ScanEvent, 'eventId' | 'timestamp'>): ScanEvent => ({
-  eventId: crypto.randomUUID(),
+  eventId: createEventId(),
   timestamp: new Date().toISOString(),
   ...event,
 });
