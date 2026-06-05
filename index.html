@@ -5,9 +5,114 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f766e" />
     <title>Laundry Cage Tracker</title>
+    <style>
+      :root { color: #10201f; background: #ecfdf5; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      * { box-sizing: border-box; }
+      body { margin: 0; }
+      main { max-width: 760px; margin: 0 auto; padding: 14px; }
+      button, input, select { font: inherit; }
+      .standalone-header { background: linear-gradient(135deg, #0f766e, #134e4a); color: white; border-radius: 0 0 24px 24px; margin: -14px -14px 14px; padding: 22px 16px; box-shadow: 0 12px 28px rgba(15, 118, 110, .25); }
+      .eyebrow { margin: 0 0 4px; text-transform: uppercase; letter-spacing: .12em; font-weight: 800; font-size: .75rem; opacity: .8; }
+      h1, h2, h3 { margin-top: 0; }
+      h1 { margin-bottom: 10px; font-size: 2rem; }
+      .tabs { display: grid; grid-template-columns: 1fr; gap: 9px; margin-bottom: 14px; }
+      .tabs button, .primary, .secondary { min-height: 52px; border: 0; border-radius: 16px; padding: 12px 14px; font-weight: 900; cursor: pointer; }
+      .tabs button { text-align: left; background: #d1fae5; color: #064e3b; }
+      .tabs button.active { background: #0f766e; color: white; }
+      .primary { width: 100%; margin-top: 12px; background: #0f766e; color: white; font-size: 1.08rem; }
+      .secondary { background: #ccfbf1; color: #134e4a; }
+      .card, .metric { background: rgba(255,255,255,.96); border: 1px solid #bbf7d0; border-radius: 22px; padding: 16px; margin-bottom: 14px; box-shadow: 0 10px 25px rgba(6, 78, 59, .08); }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .metric { margin: 0; text-align: center; font-weight: 800; color: #134e4a; }
+      .metric span { display: block; font-size: 2.1rem; color: #0f766e; }
+      label { display: grid; gap: 8px; margin: 12px 0; font-weight: 900; color: #134e4a; }
+      input, select { width: 100%; border: 2px solid #99f6e4; border-radius: 14px; padding: 13px; background: white; color: #10201f; }
+      .banner { border-radius: 20px; padding: 18px; margin-bottom: 14px; font-size: 1.1rem; font-weight: 900; text-align: center; border: 3px solid #22c55e; background: #dcfce7; color: #14532d; }
+      .banner.stop { background: #fee2e2; color: #7f1d1d; border-color: #ef4444; }
+      .table-list, .summary-list { display: grid; gap: 10px; }
+      .table-list article, .summary-list article { border-radius: 16px; padding: 12px; background: #f8fafc; border-left: 7px solid #14b8a6; display: grid; gap: 4px; }
+      .summary-list article.incomplete { border-left-color: #f97316; background: #fff7ed; }
+      .summary-list article.complete { border-left-color: #22c55e; background: #f0fdf4; }
+      .hint { color: #46706d; font-size: .92rem; }
+      @media (min-width: 620px) { .tabs { grid-template-columns: 1fr 1fr; } .standalone-header { display: flex; align-items: end; justify-content: space-between; gap: 16px; } }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <div id="root">
+      <main id="standalone-app">
+        <header class="standalone-header">
+          <div>
+            <p class="eyebrow">Browser proof of concept</p>
+            <h1>Cage Dispatch Tracker</h1>
+            <p>This version runs directly in the browser without a build step.</p>
+          </div>
+          <label>Operator <input id="operator" value="Operator" /></label>
+        </header>
+        <nav class="tabs" id="tabs"></nav>
+        <div id="banner"></div>
+        <section id="screen"></section>
+      </main>
+    </div>
+    <script>
+      (() => {
+        const storageKey = 'laundry-cage-tracker-standalone-v1';
+        const today = new Date().toISOString().slice(0, 10);
+        const screens = ['Dashboard', 'Assign Cage', 'Pack Cage', 'Move Cage', 'Load Van', 'Deliver / Return', 'Search'];
+        const seed = () => ({
+          cages: ['001', '002', '003', '004', '005'].map((id) => ({ cageId: `CAGE-EK-${id}`, status: 'Available', currentLocation: 'Returned Area', linkedOrderId: '' })),
+          orders: [
+            { orderId: 'ORDER-1001', customerName: 'ABC Hotel', route: 'EK Van 1', deliveryDate: today, expectedCages: 2, status: 'Created' },
+            { orderId: 'ORDER-1002', customerName: 'Green Care Home', route: 'EK Van 1', deliveryDate: today, expectedCages: 1, status: 'Created' },
+            { orderId: 'ORDER-1003', customerName: 'City Gym', route: 'EK Van 2', deliveryDate: today, expectedCages: 2, status: 'Created' },
+          ],
+          events: [{ action: 'Seeded', timestamp: new Date().toISOString(), notes: 'Standalone browser POC started.' }],
+        });
+        const load = () => { try { return JSON.parse(localStorage.getItem(storageKey)) || seed(); } catch { return seed(); } };
+        const save = () => { try { localStorage.setItem(storageKey, JSON.stringify(data)); } catch {} };
+        const normalise = (value) => value.trim().toUpperCase();
+        const data = load();
+        let active = 'Dashboard';
+        const screen = document.getElementById('screen');
+        const tabs = document.getElementById('tabs');
+        const banner = document.getElementById('banner');
+        const operator = document.getElementById('operator');
+        const linked = (orderId) => data.cages.filter((cage) => cage.linkedOrderId === orderId);
+        const loaded = (orderId) => linked(orderId).filter((cage) => ['Loaded on Van', 'Delivered'].includes(cage.status)).length;
+        const showBanner = (message, stop = false) => { banner.innerHTML = `<div class="banner${stop ? ' stop' : ''}">${message}</div>`; };
+        const addEvent = (action, cage, notes) => data.events.unshift({ action, cageId: cage?.cageId, orderId: cage?.linkedOrderId, operatorName: operator.value || 'Operator', timestamp: new Date().toISOString(), notes });
+        const field = (id, label, placeholder = '') => `<label>${label}<input id="${id}" placeholder="${placeholder}" /></label>`;
+        const select = (id, label, options) => `<label>${label}<select id="${id}">${options.map((option) => `<option>${option}</option>`).join('')}</select></label>`;
+        const cageByInput = (id) => data.cages.find((cage) => cage.cageId === normalise(document.getElementById(id).value));
+        const renderTabs = () => {
+          tabs.innerHTML = screens.map((name) => `<button class="${name === active ? 'active' : ''}" data-screen="${name}">${name}</button>`).join('');
+          tabs.querySelectorAll('button').forEach((button) => button.onclick = () => { active = button.dataset.screen; banner.innerHTML = ''; render(); });
+        };
+        const dashboard = () => `
+          <section class="grid">
+            <div class="metric"><span>${data.cages.length}</span>Cages</div>
+            <div class="metric"><span>${data.orders.length}</span>Orders</div>
+            <div class="metric"><span>${data.events.length}</span>Audit events</div>
+            <div class="metric"><span>${data.cages.filter((cage) => cage.status === 'Loaded on Van').length}</span>Loaded</div>
+          </section>
+          <section class="card"><h2>Route dispatch summary</h2><div class="summary-list">${data.orders.map((order) => { const missing = Math.max(order.expectedCages - loaded(order.orderId), 0); return `<article class="${missing ? 'incomplete' : 'complete'}"><strong>${order.customerName} • ${order.orderId}</strong><span>${order.route}</span><span>Expected ${order.expectedCages} / Loaded ${loaded(order.orderId)} / Missing ${missing}</span></article>`; }).join('')}</div></section>
+          <section class="card"><h2>Live cage board</h2><div class="table-list">${data.cages.map((cage) => `<article><strong>${cage.cageId}</strong><span>${cage.status}</span><span>${cage.currentLocation}</span><small>${cage.linkedOrderId || 'No order linked'}</small></article>`).join('')}</div></section>`;
+        const actionScreen = ({ title, button, inputs, run }) => {
+          screen.innerHTML = `<section class="card"><h2>${title}</h2>${inputs}<button class="primary" id="run-action">${button}</button><p class="hint">Type demo IDs like CAGE-EK-001 and ORDER-1001. Camera scanning is only available in the full dev build.</p></section>`;
+          document.getElementById('run-action').onclick = () => { run(); save(); render(); };
+        };
+        const render = () => {
+          renderTabs();
+          if (active === 'Dashboard') screen.innerHTML = dashboard();
+          if (active === 'Assign Cage') actionScreen({ title: 'Assign Cage to Order', button: 'Assign Cage', inputs: field('cage', 'Cage ID', 'CAGE-EK-001') + field('order', 'Order ID', 'ORDER-1001'), run: () => { const cage = cageByInput('cage'); const order = data.orders.find((item) => item.orderId === normalise(document.getElementById('order').value)); if (!cage || !order) return showBanner('STOP: Cage or order not found.', true); cage.linkedOrderId = order.orderId; cage.status = 'Assigned'; cage.currentLocation = 'Packing Area'; addEvent('Assign Cage', cage, 'Assigned in standalone POC.'); showBanner(`${cage.cageId} assigned to ${order.orderId}.`); } });
+          if (active === 'Pack Cage') actionScreen({ title: 'Pack Cage', button: 'Mark Packed', inputs: field('cage', 'Cage ID', 'CAGE-EK-001'), run: () => { const cage = cageByInput('cage'); if (!cage || !cage.linkedOrderId) return showBanner('STOP: Assign this cage to an order first.', true); cage.status = 'Packed'; cage.currentLocation = 'Holding Area'; addEvent('Pack Cage', cage, 'Packed.'); showBanner(`${cage.cageId} packed.`); } });
+          if (active === 'Move Cage') actionScreen({ title: 'Move Cage', button: 'Move Cage', inputs: field('cage', 'Cage ID', 'CAGE-EK-001') + select('location', 'Location', ['Packing Area', 'Holding Area', 'Dispatch Lane 1', 'Dispatch Lane 2', 'Dispatch Lane 3', 'Van', 'Customer Site', 'Returned Area']), run: () => { const cage = cageByInput('cage'); if (!cage) return showBanner('STOP: Cage not found.', true); cage.currentLocation = document.getElementById('location').value; addEvent('Move Cage', cage, `Moved to ${cage.currentLocation}.`); showBanner(`${cage.cageId} moved to ${cage.currentLocation}.`); } });
+          if (active === 'Load Van') actionScreen({ title: 'Load Van / Dispatch Check', button: 'Load Cage', inputs: field('cage', 'Cage ID', 'CAGE-EK-001'), run: () => { const cage = cageByInput('cage'); if (!cage || !['Packed', 'Ready for Dispatch'].includes(cage.status)) return showBanner('STOP: Cage must be packed before loading.', true); cage.status = 'Loaded on Van'; cage.currentLocation = 'Van'; addEvent('Load Van', cage, 'Loaded on van.'); showBanner(`${cage.cageId} loaded on van.`); } });
+          if (active === 'Deliver / Return') actionScreen({ title: 'Deliver or Return Cage', button: 'Advance Status', inputs: field('cage', 'Cage ID', 'CAGE-EK-001') + select('nextStatus', 'Next status', ['Delivered', 'Returned Empty']), run: () => { const cage = cageByInput('cage'); if (!cage) return showBanner('STOP: Cage not found.', true); const next = document.getElementById('nextStatus').value; cage.status = next; cage.currentLocation = next === 'Delivered' ? 'Customer Site' : 'Returned Area'; if (next === 'Returned Empty') cage.linkedOrderId = ''; addEvent(next, cage, `Marked ${next}.`); showBanner(`${cage.cageId} marked ${next}.`); } });
+          if (active === 'Search') actionScreen({ title: 'Search Cage or Order', button: 'Search', inputs: field('query', 'Cage or order ID', 'CAGE-EK-001 or ORDER-1001'), run: () => { const query = normalise(document.getElementById('query').value); const cage = data.cages.find((item) => item.cageId === query); const events = data.events.filter((event) => event.cageId === query || event.orderId === query); screen.innerHTML = `<section class="card"><h2>Search Results</h2>${cage ? `<p><b>${cage.cageId}</b>: ${cage.status} at ${cage.currentLocation}. Linked order: ${cage.linkedOrderId || 'None'}.</p>` : '<p>No cage match.</p>'}<h3>Audit trail</h3><div class="table-list">${events.length ? events.map((event) => `<article><strong>${event.action}</strong><span>${new Date(event.timestamp).toLocaleString()}</span><small>${event.notes || ''}</small></article>`).join('') : '<p>No events found.</p>'}</div><button class="secondary" id="back">Back to Search</button></section>`; document.getElementById('back').onclick = render; } });
+        };
+        render();
+      })();
+    </script>
+    <script type="module" src="./src/main.tsx"></script>
   </body>
 </html>

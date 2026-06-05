@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 import { ScannerInput } from './ScannerInput';
-import { createSeedData, exportFilename, isAppData, loadData, newEvent, saveData } from './storage';
+import { createSeedData, exportFilename, isAppData, loadData, newEvent, safeGetItem, safeSetItem, saveData } from './storage';
 import type { AppData, Cage, LocationName, Order, OrderStatus, ScanEvent } from './types';
 import { LOCATIONS } from './types';
 
@@ -33,7 +33,8 @@ const screens: Screen[] = [
 ];
 
 const supervisorReasons = ['Short order approved', 'Cage held back', 'Rewash required', 'Customer cancelled item', 'Other'];
-const operatorDefault = localStorage.getItem('laundry-cage-tracker-operator') || 'Operator';
+const OPERATOR_STORAGE_KEY = 'laundry-cage-tracker-operator';
+const operatorDefault = safeGetItem(OPERATOR_STORAGE_KEY) || 'Operator';
 
 const normaliseId = (id: string) => id.trim().toUpperCase();
 
@@ -58,6 +59,39 @@ function calculateOrderStatus(order: Order, cages: Cage[]): OrderStatus {
   return order.status === 'Issue' ? 'Issue' : 'Created';
 }
 
+function AppErrorFallback({ error }: { error: Error }) {
+  return (
+    <main>
+      <section className="card error-card">
+        <p className="eyebrow">Proof-of-concept recovery screen</p>
+        <h1>Cage Dispatch Tracker</h1>
+        <p>The app hit a startup error instead of rendering a blank white screen.</p>
+        <pre>{error.message}</pre>
+        <button type="button" className="primary" onClick={() => window.location.reload()}>
+          Reload app
+        </button>
+      </section>
+    </main>
+  );
+}
+
+class AppErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('Cage Dispatch Tracker render failed', error);
+  }
+
+  render() {
+    if (this.state.error) return <AppErrorFallback error={this.state.error} />;
+    return this.props.children;
+  }
+}
+
 function App() {
   const [data, setData] = useState<AppData>(() => loadData());
   const [screen, setScreen] = useState<Screen>('Dashboard');
@@ -76,7 +110,7 @@ function App() {
       saveData(recalculated);
       return recalculated;
     });
-    localStorage.setItem('laundry-cage-tracker-operator', operatorName);
+    safeSetItem(OPERATOR_STORAGE_KEY, operatorName);
     if (nextBanner) setBanner(nextBanner);
   }
 
@@ -212,7 +246,7 @@ function SimpleCageAction({ data, title, actionLabel, targetStatus, targetLocati
     if (!cage) return alert('STOP: Cage does not exist.');
     const validation = validate(cage);
     if (validation) return alert(`STOP: ${validation}`);
-    commit((current) => ({ ...current, cages: current.cages.map((item) => item.cageId === cage.cageId ? { ...item, status: targetStatus, currentLocation: targetLocation, linkedOrderId: clearOrder ? undefined : item.linkedOrderId, lastScannedAt: new Date().toISOString(), lastScannedBy: localStorage.getItem('laundry-cage-tracker-operator') || 'Operator' } : item), events: [...current.events, newEvent({ action: eventAction, cageId: cage.cageId, orderId: cage.linkedOrderId, location: targetLocation, operatorName: localStorage.getItem('laundry-cage-tracker-operator') || 'Operator', notes: `${title} completed.` })] }), { type: 'success', message: `${cage.cageId} updated to ${targetStatus}.` });
+    commit((current) => ({ ...current, cages: current.cages.map((item) => item.cageId === cage.cageId ? { ...item, status: targetStatus, currentLocation: targetLocation, linkedOrderId: clearOrder ? undefined : item.linkedOrderId, lastScannedAt: new Date().toISOString(), lastScannedBy: safeGetItem(OPERATOR_STORAGE_KEY) || 'Operator' } : item), events: [...current.events, newEvent({ action: eventAction, cageId: cage.cageId, orderId: cage.linkedOrderId, location: targetLocation, operatorName: safeGetItem(OPERATOR_STORAGE_KEY) || 'Operator', notes: `${title} completed.` })] }), { type: 'success', message: `${cage.cageId} updated to ${targetStatus}.` });
   }}>{actionLabel}</button></section>;
 }
 
@@ -228,4 +262,14 @@ function ImportExportScreen({ data, setData }: { data: AppData; setData: (data: 
   return <section className="card"><h2>Import / Export Data</h2><button className="primary" onClick={() => { const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = exportFilename(); link.click(); URL.revokeObjectURL(url); }}>Export JSON Backup</button><label>Paste JSON backup<textarea value={importText} onChange={(event) => setImportText(event.target.value)} placeholder="Paste exported JSON here" /></label><button className="secondary" onClick={() => { try { const parsed = JSON.parse(importText); if (!isAppData(parsed)) throw new Error('Invalid backup shape'); setData(parsed, { type: 'success', message: 'Backup imported.' }); } catch (error) { setData(data, { type: 'stop', message: error instanceof Error ? error.message : 'Import failed.' }); } }}>Import JSON</button><button className="danger" onClick={() => setData(createSeedData(), { type: 'info', message: 'Demo seed data restored.' })}>Reset to Seed Data</button></section>;
 }
 
-createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>);
+const rootElement = document.getElementById('root');
+
+if (rootElement) {
+  createRoot(rootElement).render(
+    <React.StrictMode>
+      <AppErrorBoundary>
+        <App />
+      </AppErrorBoundary>
+    </React.StrictMode>,
+  );
+}
