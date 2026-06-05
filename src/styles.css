@@ -1,0 +1,105 @@
+:root {
+  color: #10201f;
+  background: #ecfdf5;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+main { max-width: 720px; margin: 0 auto; padding: 14px; }
+button, input, select, textarea { font: inherit; }
+
+.app-header {
+  background: linear-gradient(135deg, #0f766e, #134e4a);
+  color: white;
+  border-radius: 0 0 24px 24px;
+  margin: -14px -14px 14px;
+  padding: 22px 16px;
+  box-shadow: 0 12px 28px rgba(15, 118, 110, .25);
+}
+
+.eyebrow { margin: 0 0 4px; text-transform: uppercase; letter-spacing: .12em; font-weight: 800; font-size: .75rem; opacity: .8; }
+h1, h2, h3 { margin-top: 0; }
+h1 { margin-bottom: 18px; font-size: 2rem; }
+.operator-label { display: grid; gap: 6px; color: #ccfbf1; font-weight: 700; }
+.operator-label input { background: rgba(255,255,255,.95); border: 0; border-radius: 14px; padding: 13px; }
+
+.tabs { display: grid; grid-template-columns: 1fr; gap: 9px; margin-bottom: 14px; }
+.tabs button, .primary, .secondary, .danger {
+  min-height: 52px;
+  border: 0;
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+.tabs button { text-align: left; background: #d1fae5; color: #064e3b; }
+.tabs button.active { background: #0f766e; color: white; }
+.primary { width: 100%; margin-top: 12px; background: #0f766e; color: white; font-size: 1.08rem; }
+.secondary { background: #ccfbf1; color: #134e4a; }
+.danger { width: 100%; margin-top: 12px; background: #fee2e2; color: #991b1b; }
+
+.card, .metric, .field-card {
+  background: rgba(255,255,255,.96);
+  border: 1px solid #bbf7d0;
+  border-radius: 22px;
+  padding: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 10px 25px rgba(6, 78, 59, .08);
+}
+.wide { grid-column: 1 / -1; }
+.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.metric { margin: 0; text-align: center; font-weight: 800; color: #134e4a; }
+.metric span { display: block; font-size: 2.1rem; color: #0f766e; }
+
+label { display: grid; gap: 8px; margin: 12px 0; font-weight: 900; color: #134e4a; }
+input, select, textarea {
+  width: 100%;
+  border: 2px solid #99f6e4;
+  border-radius: 14px;
+  padding: 13px;
+  background: white;
+  color: #10201f;
+}
+textarea { min-height: 140px; }
+.scan-row { display: grid; grid-template-columns: 1fr 92px; gap: 8px; }
+.hint { margin: 4px 0 0; color: #46706d; font-size: .9rem; }
+.scanner { margin-top: 10px; overflow: hidden; border-radius: 16px; }
+
+.banner {
+  border-radius: 20px;
+  padding: 18px;
+  margin-bottom: 14px;
+  font-size: 1.2rem;
+  font-weight: 1000;
+  text-align: center;
+  border: 3px solid transparent;
+}
+.banner.stop { background: #fee2e2; color: #7f1d1d; border-color: #ef4444; font-size: 1.45rem; }
+.banner.success { background: #dcfce7; color: #14532d; border-color: #22c55e; }
+.banner.info { background: #dbeafe; color: #1e3a8a; border-color: #60a5fa; }
+.stop-text { color: #b91c1c; font-weight: 900; }
+.success-text { color: #15803d; font-weight: 900; }
+
+.summary-list, .table-list, .timeline { display: grid; gap: 10px; }
+.summary-list article, .table-list article, .timeline article, .result {
+  border-radius: 16px;
+  padding: 12px;
+  background: #f8fafc;
+  border-left: 7px solid #14b8a6;
+}
+.summary-list article { display: grid; gap: 8px; }
+.summary-list article.incomplete { border-left-color: #f97316; background: #fff7ed; }
+.summary-list article.complete { border-left-color: #22c55e; background: #f0fdf4; }
+.summary-list article div { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 10px; }
+.summary-list span, .table-list span, .table-list small, .timeline small, .timeline time { color: #475569; }
+.table-list article { display: grid; grid-template-columns: 1fr; gap: 4px; }
+.timeline time { display: block; font-size: .86rem; margin-top: 2px; }
+.override { margin-top: 18px; padding-top: 14px; border-top: 2px dashed #99f6e4; }
+
+@media (min-width: 620px) {
+  .tabs { grid-template-columns: 1fr 1fr; }
+  .app-header { display: flex; align-items: end; justify-content: space-between; gap: 16px; }
+  .operator-label { min-width: 220px; }
+  .table-list article { grid-template-columns: 1.1fr 1fr 1fr; }
+}

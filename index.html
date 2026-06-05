@@ -3,87 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Procurement Request Builder</title>
-    <link rel="stylesheet" href="styles.css" />
+    <meta name="theme-color" content="#0f766e" />
+    <title>Laundry Cage Tracker</title>
   </head>
   <body>
-    <main class="container">
-      <h1>Procurement Request Builder</h1>
-      <p class="subtitle">
-        Upload a quote (text or PDF file) and/or paste the content below, then generate your procurement request HTML file.
-      </p>
-
-      <section class="panel">
-        <h2>1) Add your quote details</h2>
-
-        <label for="quoteFile">Upload quote file (TXT/CSV/MD/PDF)</label>
-        <input id="quoteFile" type="file" accept=".txt,.csv,.md,.pdf,text/plain,application/pdf" />
-        <p id="fileStatus" class="helper">No file selected yet.</p>
-
-        <label for="sourceText">Or paste quote text</label>
-        <textarea id="sourceText" placeholder="Paste supplier quote text here..."></textarea>
-
-        <div class="review-header">
-          <div>
-            <h3>Review extracted values</h3>
-            <p class="helper review-helper">These fields update from the source text after a short pause. Manual edits are preserved until you re-extract.</p>
-          </div>
-          <button id="reextractBtn" type="button" class="secondary-button">Re-extract</button>
-        </div>
-
-        <div class="split-fields">
-          <div>
-            <label for="supplierField">Supplier</label>
-            <input id="supplierField" type="text" placeholder="Review supplier name" />
-          </div>
-          <div>
-            <label for="referenceField">Reference</label>
-            <input id="referenceField" type="text" placeholder="Review quote/invoice reference" />
-          </div>
-        </div>
-
-        <label for="summaryField">Summary</label>
-        <textarea id="summaryField" class="review-textarea" placeholder="Review extracted summary"></textarea>
-
-        <label for="lineItemsField">Line items</label>
-        <textarea
-          id="lineItemsField"
-          class="review-textarea line-items"
-          placeholder="One item per line: description | qty | unit | notes | line total"
-        ></textarea>
-        <p class="helper">Format each item as: description | qty | unit | notes | line total.</p>
-
-        <label for="requesterPreset">Requester</label>
-        <select id="requesterPreset">
-          <option value="jacek-lewandowski">Jacek Lewandowski - Group Operations Manager</option>
-          <option value="custom">Other (enter below)</option>
-        </select>
-
-        <div class="split-fields">
-          <div>
-            <label for="customRequesterName">Custom requester name</label>
-            <input id="customRequesterName" type="text" placeholder="Enter requester name" />
-          </div>
-          <div>
-            <label for="customRequesterTitle">Custom requester job title</label>
-            <input id="customRequesterTitle" type="text" placeholder="Enter requester job title" />
-          </div>
-        </div>
-
-        <div class="actions">
-          <button id="generateBtn">Generate HTML file</button>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h2>2) Open your generated file</h2>
-        <p class="helper">Click the file below to open it in a new tab.</p>
-        <a id="htmlFileLink" class="file-link disabled" href="#" target="_blank" rel="noopener noreferrer" aria-disabled="true">
-          procurement-request.html
-        </a>
-      </section>
-    </main>
-
-    <script type="module" src="src/app.js"></script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
