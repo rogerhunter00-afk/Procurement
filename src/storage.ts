@@ -59,14 +59,26 @@ export const loadData = (): AppData => {
   const raw = safeGetItem(STORAGE_KEY);
   if (!raw) return createSeedData();
   try {
-    const parsed = JSON.parse(raw) as AppData;
+    const parsed = JSON.parse(raw) as Partial<AppData>;
     if (!Array.isArray(parsed.cages) || !Array.isArray(parsed.orders) || !Array.isArray(parsed.events)) {
-      return createSeedData();
+      return null;
     }
-    return parsed;
+
+    if (!parsed.cages.every(isValidCage) || !parsed.orders.every(isValidOrder) || !parsed.events.every(isValidEvent)) {
+      return null;
+    }
+
+    return parsed as AppData;
   } catch {
-    return createSeedData();
+    return null;
   }
+};
+
+export const loadData = (): AppData => {
+  const raw = safeGetItem(STORAGE_KEY);
+  if (!raw) return createSeedData();
+
+  return parseStoredData(raw) ?? createSeedData();
 };
 
 export const saveData = (data: AppData) => {

@@ -5,9 +5,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#0f766e" />
     <title>Laundry Cage Tracker</title>
+    <style>
+      body { margin: 0; background: #ecfdf5; color: #10201f; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+      .static-fallback { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+      .static-fallback-card { background: white; border: 1px solid #bbf7d0; border-radius: 22px; box-shadow: 0 10px 25px rgba(6, 78, 59, .08); padding: 20px; }
+      .static-fallback h1 { margin: 0 0 8px; color: #0f766e; }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main class="static-fallback">
+        <section class="static-fallback-card">
+          <h1>Cage Dispatch Tracker</h1>
+          <p>Loading the proof-of-concept app…</p>
+          <p>If this message stays here, run the built app from a static server or start it with <code>npm run dev</code>.</p>
+        </section>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

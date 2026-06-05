@@ -59,6 +59,39 @@ function calculateOrderStatus(order: Order, cages: Cage[]): OrderStatus {
   return order.status === 'Issue' ? 'Issue' : 'Created';
 }
 
+function AppErrorFallback({ error }: { error: Error }) {
+  return (
+    <main>
+      <section className="card error-card">
+        <p className="eyebrow">Proof-of-concept recovery screen</p>
+        <h1>Cage Dispatch Tracker</h1>
+        <p>The app hit a startup error instead of rendering a blank white screen.</p>
+        <pre>{error.message}</pre>
+        <button type="button" className="primary" onClick={() => window.location.reload()}>
+          Reload app
+        </button>
+      </section>
+    </main>
+  );
+}
+
+class AppErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state = { error: null };
+
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error('Cage Dispatch Tracker render failed', error);
+  }
+
+  render() {
+    if (this.state.error) return <AppErrorFallback error={this.state.error} />;
+    return this.props.children;
+  }
+}
+
 function App() {
   const [data, setData] = useState<AppData>(() => loadData());
   const [screen, setScreen] = useState<Screen>('Dashboard');
@@ -229,4 +262,14 @@ function ImportExportScreen({ data, setData }: { data: AppData; setData: (data: 
   return <section className="card"><h2>Import / Export Data</h2><button className="primary" onClick={() => { const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = exportFilename(); link.click(); URL.revokeObjectURL(url); }}>Export JSON Backup</button><label>Paste JSON backup<textarea value={importText} onChange={(event) => setImportText(event.target.value)} placeholder="Paste exported JSON here" /></label><button className="secondary" onClick={() => { try { const parsed = JSON.parse(importText); if (!isAppData(parsed)) throw new Error('Invalid backup shape'); setData(parsed, { type: 'success', message: 'Backup imported.' }); } catch (error) { setData(data, { type: 'stop', message: error instanceof Error ? error.message : 'Import failed.' }); } }}>Import JSON</button><button className="danger" onClick={() => setData(createSeedData(), { type: 'info', message: 'Demo seed data restored.' })}>Reset to Seed Data</button></section>;
 }
 
-createRoot(document.getElementById('root')!).render(<React.StrictMode><App /></React.StrictMode>);
+const rootElement = document.getElementById('root');
+
+if (rootElement) {
+  createRoot(rootElement).render(
+    <React.StrictMode>
+      <AppErrorBoundary>
+        <App />
+      </AppErrorBoundary>
+    </React.StrictMode>,
+  );
+}
